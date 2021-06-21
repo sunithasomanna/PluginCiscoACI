@@ -69,7 +69,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 8. Update the following mandatory parameters in the plugin configuration file:
 
    - **hostname**: Hostname of the cluster node where the Cisco ACI plugin will be installed.
-- **lbHost**: IP address of the cluster node where the Cisco ACI plugin will be installed.
+   - **lbHost**: IP address of the cluster node where the Cisco ACI plugin will be installed.
    - **lbPort**: Default port is 30084.
    - **aciPluginRootServiceUUID**: RootServiceUUID to be used by the Cisco ACI plugin service.
    
@@ -123,8 +123,8 @@ Other parameters can either be empty or have default values. Optionally, you can
 Example output showing the Cisco ACI plugin pod details:
 
 ```
-NAME 						READY 			STATUS 			RESTARTS 			AGE
-aciplugin-5fc4b6788-2xx97   1/1 			Running 		0 			 		4d22h
+NAME 							READY 			STATUS 			RESTARTS 			AGE
+aciplugin-5fc4b6788-2xx97   	1/1 			Running 		0 			 		4d22h
 ```
 
 13. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
