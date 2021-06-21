@@ -73,8 +73,9 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    - **lbPort**: Default port is 30084.
    - **aciPluginRootServiceUUID**: RootServiceUUID to be used by the Cisco ACI plugin service.
    
+
 Other parameters can either be empty or have default values. Optionally, you can update them with values based on your requirements. For more information on each parameter, see [Plugin configuration parameters](#plugin-configuration-parameters).
-   
+
 7. Generate the Helm package for the Cisco ACI plugin on the deployment node:
 
    1. Navigate to `odim-controller/helmcharts/aciplugin`.
@@ -175,49 +176,47 @@ The plugin you want to add is successfully deployed.
    | UserName         | String \(required\)<br> | The plugin username. See default administrator account usernames of all the plugins in "Default plugin credentials".<br> |
    | Password         | String \(required\)<br> | The plugin password. See default administrator account passwords of all the plugins in "Default plugin credentials".<br> |
    | ConnectionMethod | Array \(required\)<br>  | Links to the connection methods that are used to communicate with this endpoint: `/redfish/v1/AggregationService/AggregationSources`.<br><blockquote>NOTE: Ensure that the connection method information for the plugin you want to add is updated in the odim-controller configuration file.<br></blockquote>To know which connection method to use, do the following:<br>    1.  Perform HTTP `GET` on: `/redfish/v1/AggregationService/ConnectionMethods`.<br>You will receive a list of links to available connection methods.<br>    2.  Perform HTTP `GET` on each link. Check the value of the `ConnectionMethodVariant` property in the JSON response. It displays the details of a plugin. Choose a connection method having the details of the plugin of your choice. For available connection method variants, see "Connection method variants" table.<br> |
-   
+
    | Plugin           | Default username | Default password | Connection method variant    |
    | ---------------- | ---------------- | ---------------- | ---------------------------- |
    | Cisco ACI plugin | admin            | Plug!n12$4       | Fabric:XAuthToken:ACI_v1.0.0 |
-   
+
    Use the following curl command to add the plugin:
 
    ```
-curl -i POST \
+   curl -i POST \
       -H 'Authorization:Basic {base64_encoded_string_of_[odim_username:odim_password]}' \
       -H "Content-Type:application/json" \
       -d \
    '{"HostName":"{plugin_host}:{port}",
      "UserName":"{plugin_userName}",
      "Password":"{plugin_password}", 
-  "Links":{
+     "Links":{
          "ConnectionMethod": {
             "@odata.id": "/redfish/v1/AggregationService/ConnectionMethods/{ConnectionMethodId}"
          }
    }
    }' \
- 'https://{odim_host}:30080/redfish/v1/AggregationService/AggregationSources'
+    'https://{odim_host}:30080/redfish/v1/AggregationService/AggregationSources'
    ```
-   
+
    <blockquote>
     NOTE: To generate a base64 encoded string of `{odim_username:odim_password}`, run the following command:</blockquote>
-   
+
    ```
    $ echo -n '{odim_username}:{odim_password}' | base64 -w0
    ```
-   
+
    Replace `{base64_encoded_string_of_[odim_username:odim_password]}` with the generated base64 encoded string in the curl command. You will receive:
-   
+
    -   An HTTP `202 Accepted` status code.
    -   A link to the task monitor associated with this operation in the response header.
-   
+
    To know the status of this task, perform HTTP `GET` on the `taskmon` URI until the task is complete. If the plugin is added successfully, you will receive an HTTP `200 OK` status code.
-   
-After the plugin is successfully added, it will also be available as a manager resource at:
-   
-   `/redfish/v1/Managers`.
-   
-   For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).
+
+   After the plugin is successfully added, it will also be available as a manager resource at:
+
+   `/redfish/v1/Managers`For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).
 
 2. To verify that the added plugin is active and running, do the following: 
 
@@ -342,7 +341,7 @@ After the plugin is successfully added, it will also be available as a manager r
    nginx: [emerg] bind() to <VIP>:<nginx_port> failed (99: Cannot assign requested address)
    ```
 
-   ## Plugin configuration parameters
+## Plugin configuration parameters
 
 The following table lists all the configuration parameters required to deploy a plugin service:
 
