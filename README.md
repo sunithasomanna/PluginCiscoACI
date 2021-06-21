@@ -1,4 +1,12 @@
+[![build_deploy_test Actions Status](https://github.com/ODIM-Project/ODIM/workflows/build_deploy_test/badge.svg)](https://github.com/ODIM-Project/ODIM/actions)
+[![build_unittest Actions Status](https://github.com/ODIM-Project/ODIM/workflows/build_unittest/badge.svg)](https://github.com/ODIM-Project/ODIM/actions)
 
+# Table of contents
+
+- [Deploying the Cisco ACI plugin](#deploying-the-cisco-aci-plugin)
+- [Adding a plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework)
+- [Configuring proxy server for a plugin version](#configuring-proxy-server-for-a-plugin-version)
+- [Plugin configuration parameters](#plugin-configuration-parameters)
 
 ## Deploying the Cisco ACI plugin
 
@@ -6,19 +14,13 @@
 
 Kubernetes cluster is set up and the resource aggregator is successfully deployed.
 
-1. Save the Cisco ACI plugin Docker image on the deployment node:
-
-   ```
-   $ sudo docker save -o aciplugin.tar aciplugin:1.0
-   ```
-
-2. Create a directory called `plugins` on the deployment node:
+1. Create a directory called `plugins` on the deployment node.
 
    ```
    $ mkdir plugins
    ```
 
-3. In the `plugins` directory, create a directory called `aciplugin` on the deployment node:
+3. In the `plugins` directory, create a directory called `aciplugin`.
 
    ```
    $ mkdir ~/plugins/aciplugin
@@ -34,19 +36,17 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    $ sudo chown odimra:odimra /var/log/aciplugin_logs
    ```
 
-5. Copy the Cisco ACI plugin configuration file to `~/plugins/aciplugin`:
+5. On the deployment node, copy the Cisco ACI plugin configuration file to `~/plugins/aciplugin`.
 
    ```
    $ cp ~/ODIM/odim-controller/helmcharts/aciplugin/aciplugin-config.yaml ~/plugins/aciplugin
    ```
 
-6. Log in to the deployment node and open the Cisco ACI plugin configuration YAML file to edit: 
+5. Open the Dell plugin configuration YAML file.
 
    ```
    $ vi ~/plugins/aciplugin/aciplugin-config.yaml
    ```
-
-7. Update the Cisco ACI plugin configuration YAML file and save: 
 
    **Sample aciplugin-config.yaml file:**
 
@@ -66,16 +66,16 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    
    ```
 
-   It is mandatory to update the following parameters in this file:
+8. Update the following mandatory parameters in the plugin configuration file:
 
    - **hostname**: Hostname of the cluster node where the Cisco ACI plugin will be installed.
-   - **lbHost**: IP address of the cluster node where the Cisco ACI plugin will be installed.
+- **lbHost**: IP address of the cluster node where the Cisco ACI plugin will be installed.
    - **lbPort**: Default port is 30084.
-   - **aciPluginRootServiceUUID**
-
-   Other parameters can either be empty or have default values. Optionally, you can update them with values based on your requirements. For more information on each parameter, see [Plugin configuration parameters](#plugin-configuration-parameters).
-
-8. Generate Helm package for the Cisco ACI plugin on the deployment node:
+   - **aciPluginRootServiceUUID**: RootServiceUUID to be used by the Cisco ACI plugin service.
+   
+Other parameters can either be empty or have default values. Optionally, you can update them with values based on your requirements. For more information on each parameter, see [Plugin configuration parameters](#plugin-configuration-parameters).
+   
+7. Generate the Helm package for the Cisco ACI plugin on the deployment node:
 
    1. Navigate to `odim-controller/helmcharts/aciplugin`.
 
@@ -83,21 +83,31 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
       $ cd ~/ODIM/odim-controller/helmcharts/aciplugin
       ```
 
-   2. Run the following command:
+   2. Run the following command to create `aciplugin` Helm package at `~/plugins/aciplugin`:
 
       ```
-      $ helm package aciplugin
+      $ helm package aciplugin -d ~/plugins/aciplugin
       ```
 
-      The Helm package for the Cisco ACI plugin is created in the tar format.
+      The Helm package for the Cisco ACI plugin is created in the tgz format.
 
-9. Copy the Helm package, `aciplugin.tgz`, and `aciplugin.tar` to `~/plugins/aciplugin`.
+8. Save the Dell plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
-10. If it is a three-node cluster configuration, log in to each cluster node and [configure proxy server for the plugin](#configuring-proxy-server-for-a-plugin-version). 
+   ```
+   $ sudo docker save aciplugin:1.0 -o ~/plugins/aciplugin/aciplugin.tar
+   ```
 
-    Skip this step if it is a one-node cluster configuration.
+9. If it is a three-node cluster configuration, log in to each cluster node and [configure proxy server for the plugin](#configuring-proxy-server-for-a-plugin-version). 
 
-11. Log in to the deployment node and run the following command to install the Cisco ACI plugin: 
+   Skip this step if it is a one-node cluster configuration.
+
+10. Navigate to the `/ODIM/odim-controller/scripts` directory on the deployment node.
+
+    ```
+    $ cd ~/ODIM/odim-controller/scripts
+    ```
+
+11. Run the following command to install the Cisco ACI plugin: 
 
     ```
     $ python3 odim-controller.py --config \
@@ -105,7 +115,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     /kube_deploy_nodes.yaml --add plugin --plugin aciplugin
     ```
 
-12. Verify that the Cisco ACI plugin pod is up and running: 
+12. un the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
 
     `$ kubectl get pods -n odim`
 
@@ -113,7 +123,7 @@ Example output showing the Cisco ACI plugin pod details:
 
 ```
 NAME 						READY 			STATUS 			RESTARTS 			AGE
-aciplugin-5fc4b6788-2xx97  1/1 			Running 		0 			 		4d22h
+aciplugin-5fc4b6788-2xx97   1/1 			Running 		0 			 		4d22h
 ```
 
 13. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
@@ -142,21 +152,6 @@ The plugin you want to add is successfully deployed.
 
    -   A link to the connection method having the details of the plugin
 
-   **Sample request payload for adding the GRF plugin:** 
-
-   ```
-   {
-      "HostName":"aciplugin:45001",
-      "UserName":"admin",
-      "Password":"ACIPlug!n12$4",
-      "Links":{
-              "ConnectionMethod": {
-                "@odata.id": "/redfish/v1/AggregationService/ConnectionMethods/d172e66c-b4a8-437c-981b-1c07ddfeacaa"
-            }
-      }
-   }
-   ```
-
    **Sample request payload for adding URP:** 
 
    ```
@@ -180,51 +175,49 @@ The plugin you want to add is successfully deployed.
    | UserName         | String \(required\)<br> | The plugin username. See default administrator account usernames of all the plugins in "Default plugin credentials".<br> |
    | Password         | String \(required\)<br> | The plugin password. See default administrator account passwords of all the plugins in "Default plugin credentials".<br> |
    | ConnectionMethod | Array \(required\)<br>  | Links to the connection methods that are used to communicate with this endpoint: `/redfish/v1/AggregationService/AggregationSources`.<br><blockquote>NOTE: Ensure that the connection method information for the plugin you want to add is updated in the odim-controller configuration file.<br></blockquote>To know which connection method to use, do the following:<br>    1.  Perform HTTP `GET` on: `/redfish/v1/AggregationService/ConnectionMethods`.<br>You will receive a list of links to available connection methods.<br>    2.  Perform HTTP `GET` on each link. Check the value of the `ConnectionMethodVariant` property in the JSON response. It displays the details of a plugin. Choose a connection method having the details of the plugin of your choice. For available connection method variants, see "Connection method variants" table.<br> |
-
+   
    | Plugin           | Default username | Default password | Connection method variant    |
    | ---------------- | ---------------- | ---------------- | ---------------------------- |
    | Cisco ACI plugin | admin            | Plug!n12$4       | Fabric:XAuthToken:ACI_v1.0.0 |
-
+   
    Use the following curl command to add the plugin:
 
    ```
-   curl -i POST \
+curl -i POST \
       -H 'Authorization:Basic {base64_encoded_string_of_[odim_username:odim_password]}' \
       -H "Content-Type:application/json" \
       -d \
    '{"HostName":"{plugin_host}:{port}",
      "UserName":"{plugin_userName}",
      "Password":"{plugin_password}", 
-     "Links":{
+  "Links":{
          "ConnectionMethod": {
             "@odata.id": "/redfish/v1/AggregationService/ConnectionMethods/{ConnectionMethodId}"
          }
-      }
+   }
    }' \
-    'https://{odim_host}:30080/redfish/v1/AggregationService/AggregationSources'
+ 'https://{odim_host}:30080/redfish/v1/AggregationService/AggregationSources'
    ```
-
+   
    <blockquote>
     NOTE: To generate a base64 encoded string of `{odim_username:odim_password}`, run the following command:</blockquote>
-
-
-    ```
-    $ echo -n '{odim_username}:{odim_password}' | base64 -w0
-    ```
-
+   
+   ```
+   $ echo -n '{odim_username}:{odim_password}' | base64 -w0
+   ```
+   
    Replace `{base64_encoded_string_of_[odim_username:odim_password]}` with the generated base64 encoded string in the curl command. You will receive:
-
-    -   An HTTP `202 Accepted` status code.
-
-    -   A link to the task monitor associated with this operation in the response header.
-
-    To know the status of this task, perform HTTP `GET` on the `taskmon` URI until the task is complete. If the plugin is added successfully, you will receive an HTTP `200 OK` status code.
-
-    After the plugin is successfully added, it will also be available as a manager resource at:
-
-    `/redfish/v1/Managers`.
-
-    For more information, refer to "Adding a plugin" in [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).
+   
+   -   An HTTP `202 Accepted` status code.
+   -   A link to the task monitor associated with this operation in the response header.
+   
+   To know the status of this task, perform HTTP `GET` on the `taskmon` URI until the task is complete. If the plugin is added successfully, you will receive an HTTP `200 OK` status code.
+   
+After the plugin is successfully added, it will also be available as a manager resource at:
+   
+   `/redfish/v1/Managers`.
+   
+   For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).
 
 2. To verify that the added plugin is active and running, do the following: 
 
@@ -334,7 +327,7 @@ The plugin you want to add is successfully deployed.
    | <k8s_node2_IP><k8s_node3_IP><br> | The physical IP addresses of the other cluster nodes.        |
    | <plugin_node_port>               | The port specified for the eventListenerNodePort configuration parameter in the `<plugin_name>-config.yaml` file. |
    | <VIP>                            | Virtual IP address specified in the keepalived.conf file.    |
-   | <nginx_plugin_port>              | Any free port on the cluster node. It must be available on all the other cluster nodes.Preferred port is above 45000.<br>Ensure that this port is not used as any other service port.<br>**NOTE**: You can reach the resource aggregator API server at:<br>`https://<VIP>:<nginx_api_port>`.<br> |
+   | <nginx_plugin_port>              | Any free port on the cluster node. It must be available on all the other cluster nodes. Preferred port is above 45000.<br>Ensure that this port is not used as any other service port.<br>**NOTE**: You can reach the resource aggregator API server at:<br>`https://<VIP>:<nginx_api_port>`.<br> |
 
 4. Restart Nginx systemd service only on the leader node \(cluster node where Keepalived priority is set to a higher number\): 
 
@@ -344,38 +337,29 @@ The plugin you want to add is successfully deployed.
 
    <blockquote>
    NOTE:If you restart Nginx on a follower node \(cluster node having lower Keepalived priority number\), the service fails to start with the following error:</blockquote>
-
-
+   
    ```
    nginx: [emerg] bind() to <VIP>:<nginx_port> failed (99: Cannot assign requested address)
    ```
 
    ## Plugin configuration parameters
 
-   The following table lists all the configuration parameters required to deploy a plugin service:
+The following table lists all the configuration parameters required to deploy a plugin service:
 
-   | Parameter             | Description                                                  |
-   | --------------------- | ------------------------------------------------------------ |
-   | odimra                | List of configurations required for deploying the services of Resource Aggregator for ODIM and third-party services.<br> **NOTE**: Ensure that the values of the parameters listed under odimra are same as the ones specified in the `kube_deploy_nodes.yaml` file.<br> |
-   | namespace             | Namespace to be used for creating the service pods of Resource Aggregator for ODIM. The default value is "odim". You can optionally change it to a different value.<br> |
-   | groupID               | Group ID to be used for creating the odimra group.The default value is 2021. You can optionally change it to a different value.<br>**NOTE**: Ensure that the group id is not already in use on any of the nodes.<br> |
-   | haDeploymentEnabled   | When set to true, it deploys third-party services as a three-instance cluster. By default, it is set to true. Before setting it to false, ensure that there are at least three nodes in the Kubernetes cluster.<br> |
-   | eventListenerNodePort | The port used for listening to plugin events. Refer to the sample plugin yaml configuration file to view the sample port information.<br> |
-   | RootServiceUUID       | RootServiceUUID to be used by the plugin service. To generate an UUID, run the following command:<br> ```$ uuidgen```<br> Copy the output and paste it as the value for rootServiceUUID.<br> |
-   | username              | Username of the plugin.                                      |
-   | password              | The encrypted password of the plugin.                        |
-   | odimUsername          | The username of the default administrator account of Resource Aggregator for ODIM . <br />**NOTE**: This parameter is applicable only to URP.<br> |
-   | odimPassword          | The encrypted password of the default administrator account of Resource Aggregator for ODIM.<br />**NOTE**: This parameter is applicable only to URP.<br> To generate the encrypted password, run the command specified in "Command to generate an encrypted password". |
-   | lbHost                | If there is only one cluster node, the lbHost is the IP address of the cluster node. If there is more than one cluster node \( haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived.<br> |
-   | lbPort                | If it is a one-cluster configuration, the lbPort must be same as eventListenerNodePort. <br>If there is more than one cluster node \( haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file.<br> |
-   | logPath               | The path where the plugin logs are stored. The default path is `/var/log/<plugin_name>_logs`<br>**Example**: /var/log/grfplugin\_logs<br> |
+| Parameter             | Description                                                  |
+| --------------------- | ------------------------------------------------------------ |
+| odimra                | List of configurations required for deploying the services of Resource Aggregator for ODIM and third-party services.<br> **NOTE**: Ensure that the values of the parameters listed under odimra are same as the ones specified in the `kube_deploy_nodes.yaml` file. |
+| namespace             | Namespace to be used for creating the service pods of Resource Aggregator for ODIM. The default value is "odim". You can optionally change it to a different value. |
+| groupID               | Group ID to be used for creating the odimra group.The default value is 2021. You can optionally change it to a different value.<br>**NOTE**: Ensure that the group id is not already in use on any of the nodes. |
+| haDeploymentEnabled   | When set to true, it deploys third-party services as a three-instance cluster. By default, it is set to true. Before setting it to false, ensure that there are at least three nodes in the Kubernetes cluster. |
+| eventListenerNodePort | The port used for listening to plugin events. Refer to the sample plugin yaml configuration file to view the sample port information. |
+| RootServiceUUID       | RootServiceUUID to be used by the plugin service. To generate an UUID, run the following command:<br> ```$ uuidgen```<br> Copy the output and paste it as the value for rootServiceUUID. |
+| username              | Username of the plugin.                                      |
+| password              | The encrypted password of the plugin.                        |
+| odimUsername          | The username of the default administrator account of Resource Aggregator for ODIM . <br />**NOTE**: This parameter is applicable only to URP. |
+| odimPassword          | The encrypted password of the default administrator account of Resource Aggregator for ODIM.<br />**NOTE**: This parameter is applicable only to URP.<br> To generate the encrypted password, run the command specified in "Command to generate an encrypted password". |
+| lbHost                | If there is only one cluster node, the lbHost is the IP address of the cluster node. If there is more than one cluster node \( haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived. |
+| lbPort                | If it is a one-cluster configuration, the lbPort must be same as eventListenerNodePort. <br>If there is more than one cluster node \( haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file. |
+| logPath               | The path where the plugin logs are stored. The default path is `/var/log/<plugin_name>_logs`<br />**Example**: /var/log/grfplugin\_logs |
 
-   **Command to generate an encrypted password**
-
-   ```
-   $ echo -n '<odimra_password>' | openssl pkeyutl -encrypt -inkey \ 
-   ~/ODIM/odim-controller/scripts/certs/<deploymentid>/odimra_rsa.private \ 
-   -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha512|openssl base64 -A 
-   ```
-
-   
+ 
