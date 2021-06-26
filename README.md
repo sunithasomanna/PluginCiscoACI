@@ -192,10 +192,10 @@ The plugin you want to add is successfully deployed.
    
    | Parameter        | Type                    | Description                                                  |
    | ---------------- | ----------------------- | ------------------------------------------------------------ |
-   | HostName         | String \(required\)<br> | It is the plugin service name and the port specified in the Kubernetes environment. For default plugin ports, see [Resource Aggregator for ODIM default ports](#resource-aggregator-for-odim-default-ports).<br><blockquote>NOTE: If you are using a different port for a plugin, ensure that the port is greater than `45000`.<br></blockquote> |
-   | UserName         | String \(required\)<br> | The plugin username. See default administrator account usernames of all the plugins in "Default plugin credentials".<br> |
-   | Password         | String \(required\)<br> | The plugin password. See default administrator account passwords of all the plugins in "Default plugin credentials".<br> |
-   | ConnectionMethod | Array \(required\)<br>  | Links to the connection methods that are used to communicate with this endpoint: `/redfish/v1/AggregationService/AggregationSources`.<br><blockquote>NOTE: Ensure that the connection method information for the plugin you want to add is updated in the odim-controller configuration file.<br></blockquote>To know which connection method to use, do the following:<br>    1.  Perform HTTP `GET` on: `/redfish/v1/AggregationService/ConnectionMethods`.<br>You will receive a list of links to available connection methods.<br>    2.  Perform HTTP `GET` on each link. Check the value of the `ConnectionMethodVariant` property in the JSON response. It displays the details of a plugin. Choose a connection method having the details of the plugin of your choice. For available connection method variants, see "Connection method variants" table.<br> |
+   | HostName         | String \(required\)<br> | It is the plugin service name and the port specified in the Kubernetes environment. For default plugin ports, see [Resource Aggregator for ODIM default ports](#resource-aggregator-for-odim-default-ports).<br>**NOTE**: If you are using a different port for a plugin, ensure that the port is greater than `45000`. |
+   | UserName         | String \(required\)<br> | The plugin username. See default administrator account usernames of all the plugins in "Default plugin credentials". |
+   | Password         | String \(required\)<br> | The plugin password. See default administrator account passwords of all the plugins in "Default plugin credentials". |
+   | ConnectionMethod | Array \(required\)<br>  | Links to the connection methods that are used to communicate with this endpoint: `/redfish/v1/AggregationService/AggregationSources`.<br>**NOTE**: Ensure that the connection method information for the plugin you want to add is updated in the odim-controller configuration file.<br>To know which connection method to use, do the following:<br>    1.  Perform HTTP `GET` on: `/redfish/v1/AggregationService/ConnectionMethods`.<br>You will receive a list of links to available connection methods.<br>    2.  Perform HTTP `GET` on each link. Check the value of the `ConnectionMethodVariant` property in the JSON response. It displays the details of a plugin. Choose a connection method having the details of the plugin of your choice. For available connection method variants, see "Connection method variants" table.<br> |
    
    | Plugin           | Default username | Default password | Connection method variant    |
    | ---------------- | ---------------- | ---------------- | ---------------------------- |
@@ -529,17 +529,710 @@ Transfer-Encoding:chunked
 
 ## Creating a default zone
 
+| **Method**         | `POST`                                                      |
+| ------------------ | ----------------------------------------------------------- |
+| **URI**            | `/redfish/v1/Fabrics/{fabricID}/Zones`                      |
+| **Description**    | This operation creates a default zone in a specific fabric. |
+| **Returns**        | JSON schema representing the created zone.                  |
+| **Response code**  | On success, `201 Created`                                   |
+| **Authentication** | Yes                                                         |
 
 
+>**curl command**
 
 
+```
+curl -i POST \
+-H "X-Auth-Token:{X-Auth-Token}" \
+-d \
+'{
+"Name":"HPE-Tenant",
+"Description":"Default Zone",
+"ZoneType":"Default"
+}'
+'https://{odim_host}:{port}/redfish/v1/Fabrics/{fabricID}/Zones'
+
+```
+
+>**Sample request body**
+
+```
+{
+"Name":"HPE-Tenant",
+"Description":"Default Zone",
+"ZoneType":"Default"
+}
+```
+
+**Request parameters**
+
+| Parameter   | Type                  | Description                                                  |
+| ----------- | --------------------- | ------------------------------------------------------------ |
+| Name        | String (optional)     | Name for the zone.<br />**NOTE**: Ensure that there are no spaces. |
+| Description | String (optional)     | The description for the zone.                                |
+| ZoneType    | String<br/>(required) | The type of the zone to be created. Options include:<br/>• ZoneOfZones<br/>• ZoneOfEndpoints<br/>• Default<br/>The type of the zone for a default zone is Default.<br/> |
+
+>**Sample response header** 
+
+```
+HTTP/1.1 201 Created
+Allow: "GET", "PUT", "POST", "PATCH", "DELETE"
+Cache-Control: no-cache
+Connection: keep-alive
+Content-Type: application/json; charset=utf-8
+Location: /redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Zones/adce4bd8-0f39-421d-9b78-5fb6981ca68b
+Odata-Version: 4.0
+X-Frame-Options: sameorigin
+Date: Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
+Transfer-Encoding: chunked
+
+```
+
+>**Sample response body**
+
+```
+{
+"@odata.context":"/redfish/v1/$metadata#Zone.Zone",
+"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Zones/adce4bd8-0f39-421d-9b78-5fb6981ca68b",
+"@odata.type":"#Zone.v1_4_0.Zone",
+"Description":"Default Zone",
+"Id":"adce4bd8-0f39-421d-9b78-5fb6981ca68b",
+"Name":"HPE-Tenant",
+"Status":{
+"Health":"OK",
+"State":"Enabled"
+},
+"ZoneType":"Default"
+}
+```
+
+## Creating a zone of zones
+
+| **Method**         | `POST`                                                       |
+| ------------------ | ------------------------------------------------------------ |
+| **URI**            | `/redfish/v1/Fabrics/{fabricID}/Zones`                       |
+| **Description**    | This operation creates an empty container zone for all the other zones in a specific fabric. You can assign address pools, endpoints, other zones, or switches to this zone. |
+| **Returns**        | JSON schema representing the created zone.                   |
+| **Response code**  | On success, `201 Created`                                    |
+| **Authentication** | Yes                                                          |
 
 
+>**curl command**
 
 
+```
+curl -i POST \
+-H "X-Auth-Token:{X-Auth-Token}" \
+-d \
+'{
+"Name":"HPE-App1",
+"Description":"Zone of endpoints",
+"ZoneType":"ZoneOfZones",
+"Links":{
+"ContainedByZones":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Zones/e5badcc7-707c-443d-b06f-b59686e1352d"
+}
+],
+"AddressPools":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/AddressPools/311a78f1-ce37-4ace-9020-04688e55c398"
+}
+]
+}
+}'
+'https://{odim_host}:{port}/redfish/v1/Fabrics/{fabricID}/Zones'
+```
+
+>**Sample request body**
+
+```
+{
+"Name":"HPE-App1",
+"Description":"Zone of endpoints",
+"ZoneType":"ZoneOfZones",
+"Links":{
+"ContainedByZones":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Zones/e5badcc7-707c-443d-b06f-b59686e1352d"
+}
+],
+"AddressPools":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/AddressPools/311a78f1-ce37-4ace-9020-04688e55c398"
+}
+]
+}
+}
+```
+
+**Request parameters**
+
+| Parameter        | Type                  | Description                                                  |
+| ---------------- | --------------------- | ------------------------------------------------------------ |
+| Name             | String (optional)     | Name for the zone.<br />**NOTE**: Ensure that there are no spaces. |
+| Description      | String (optional)     | Description for the zone.                                    |
+| ZoneType         | String<br/>(required) | The type of the zone to be created. Options include:<br/>• ZoneOfZones<br/>• ZoneOfEndpoints<br/>• Default<br/>The type of the zone for a default zone is ZoneOfZones.<br/> |
+| Links{           | (required)            |                                                              |
+| ContainedByZones | Array<br/>(required)  | Represents an array of default zones for the zone being created. |
+| AddressPools     | Array<br/>(required)  | AddressPool links supported for the Zone of Zones (AddressPool links created for ZoneOfZones). |
+
+>**Sample response header** 
+
+```
+HTTP/1.1 201 Created
+Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
+Cache-Control:no-cache
+Connection:keep-alive
+Content-Type:application/json; charset=utf-8
+Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Zones/6415d9aa-47a3-439d-93bb-5b23dccf5d60
+Odata-Version:4.0
+X-Frame-Options:sameorigin
+Date:Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
+Transfer-Encoding:chunked
+
+```
+
+>**Sample response body**
+
+```
+{
+"@odata.context":"/redfish/v1/$metadata#Zone.Zone",
+"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/
+Zones/6415d9aa-47a3-439d-93bb-5b23dccf5d60",
+"@odata.type":"#Zone.v1_4_0.Zone",
+"Description":"Zone of endpoints",
+"Id":"6415d9aa-47a3-439d-93bb-5b23dccf5d60",
+"Links":{
+"AddressPools":[
+{
+"@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
+416c-8c82-413153a3c351:1/AddressPools/
+3d251ab9-2566-410a-9416-8164a0080d9a"
+}
+],
+"ContainedByZones":[
+{
+"@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
+416c-8c82-413153a3c351:1/Zones/adce4bd8-0f39-421d-9b78-5fb6981ca68b"
+}
+],
+"ContainedByZones@odata.count":1
+},
+"Name":"HPE-App1",
+"Status":{
+"Health":"OK",
+"State":"Enabled"
+},
+"ZoneType":"ZoneOfZones"
+}
+```
+
+## Updating the connected ports
+
+| **Method**         | `PATCH`                                                      |
+| ------------------ | ------------------------------------------------------------ |
+| **URI**            | `/redfish/v1/Fabrics/{fabricid}/Switches/{switchid}/Ports/{portid}` |
+| **Description**    | This operation updates a connected port.                     |
+| **Returns**        | JSON schema representing the updated connected port.         |
+| **Response code**  | On success, `200 OK`                                         |
+| **Authentication** | Yes                                                          |
+
+>**curl command**
 
 
+```
+curl -i PATCH \
+-H "X-Auth-Token:{X-Auth-Token}" \
+-d \
+'{
+"Links":{
+"ConnectedPorts":[
+{
+"@odata.id":"/redfish/v1/Systems/4f65617c-7337-4bc0-a277-e9b3b4865af7:1/EthernetInterfaces/1"
+}
+]
+}
+}'
+'https://{odim_host}:{port}/redfish/v1/Fabrics/{fabricID}/Switches/{switchid}/Ports/{portid}'
+```
 
+>**Sample request body**
+
+```
+{
+"Links":{
+"ConnectedPorts":[
+{
+"@odata.id":"/redfish/v1/Systems/4f65617c-7337-4bc0-a277-e9b3b4865af7:1/EthernetInterfaces/1"
+}
+]
+}
+}
+```
+
+**Request parameters**
+
+| Parameter      | Type                 | Description                                      |
+| -------------- | -------------------- | ------------------------------------------------ |
+| Links{         | (required)           |                                                  |
+| ContainedPorts | Array<br/>(required) | Represents an array of links to connected ports. |
+>**Sample response header** 
+
+```
+HTTP/1.1 200 OK
+Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
+Cache-Control:no-cache
+Connection:keep-alive
+Content-Type:application/json; charset=utf-8
+Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Switches/
+9c5735d8-5598-40a4-896f-41cbc364f2fd:101/Ports/
+ccae270d-4524-44de-95ba-62a92d9476d6:eth1-2
+Odata-Version:4.0
+X-Frame-Options:sameorigin
+Date:Fri, 02 Apr 2021 07:39:26 GMT-2d 22h
+Transfer-Encoding:chunked
+```
+
+>**Sample response body**
+
+```
+{
+"@odata.context":"/redfish/v1/$metadata#Port.Port",
+"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/
+Switches/9c5735d8-5598-40a4-896f-41cbc364f2fd:101/Ports/
+ccae270d-4524-44de-95ba-62a92d9476d6:eth1-2",
+"@odata.type":"#Port.v1_3_0.Port",
+"Id":"ccae270d-4524-44de-95ba-62a92d9476d6:eth1-2",
+"InterfaceEnabled":false,
+"LinkNetworkTechnology":"Ethernet",
+"Links":{
+"ConnectedPorts":[
+{
+"@odata.id":"/redfish/v1/Systems/
+951ed562-0323-4351-9c0f-6240a25ec478:1/EthernetInterfaces/1"
+}
+]
+},
+"MaxFrameSize":9000,
+"Name":"Port-eth1/2",
+"PortId":"eth1/2",
+"PortProtocol":"Ethernet",
+"PortType":"BidirectionalPort"
+}
+```
+
+## Creating a redundant endpoint
+
+| **Method**         | `POST`                                                       |
+| ------------------ | ------------------------------------------------------------ |
+| **URI**            | `/redfish/v1/Fabrics/{fabricID}/Endpoints`                   |
+| **Description**    | This operation creates a redundant endpoint in a specific fabric. |
+| **Returns**        | • Link to the created endpoint in the `Location` header.<br/>• JSON schema representing the created endpoint. |
+| **Response code**  | On success, `201 Created`                                    |
+| **Authentication** | Yes                                                          |
+
+>**curl command**
+
+
+```
+curl -i POST \
+-H "X-Auth-Token:{X-Auth-Token}" \
+-d \
+'{
+"Name": "Redundant-Endpoint-1",
+"Description": "Redundant Endpoint to provide redundancy between two
+Leaf switch ports",
+"Redundancy": [
+{
+"Mode": "Sharing",
+"RedundancySet": [
+{
+"@odata.id": "/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Switches/71b33448-9423-4c23-b517-eb6b3ce3b751:101/Ports/
+90069713-cf34-4948-a5ca-abc22a13c56b:eth1-2"
+},
+{
+"@odata.id": "/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Switches/b1b3d0e2-3860-4caf-ade4-2db7e9f6c075:102/Ports/
+1655f138-2c46-49b6-aedf-61645d73ad3f:eth1-2"
+}
+]
+}
+]
+}'
+'https://{odim_host}:{port}/redfish/v1/Fabrics/{fabricID}/Endpoints'
+```
+
+>**Sample request body**
+
+```
+{
+"Name": "Redundant-Endpoint-1",
+"Description": "Redundant Endpoint to provide redundancy between two
+Leaf switch ports",
+"Redundancy": [
+{
+"Mode": "Sharing",
+"RedundancySet": [
+{
+"@odata.id": "/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Switches/71b33448-9423-4c23-b517-eb6b3ce3b751:101/Ports/
+90069713-cf34-4948-a5ca-abc22a13c56b:eth1-2"
+},
+{
+"@odata.id": "/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Switches/b1b3d0e2-3860-4caf-ade4-2db7e9f6c075:102/Ports/
+1655f138-2c46-49b6-aedf-61645d73ad3f:eth1-2"
+}
+]
+}
+]
+}
+```
+
+**Request parameters**
+
+| Parameter      | Type                  | Description                                                  |
+| -------------- | --------------------- | ------------------------------------------------------------ |
+| Name           | String<br/>(optional) | Name for the endpoint.                                       |
+| Description    | String<br/>(optional) | Description for the endpoint.                                |
+| Redundancy[    | Array                 |                                                              |
+| Mode           | String                | Redundancy mode.                                             |
+| RedundancySet] | Array                 | Set of redundancy ports connected to the switches.<br/>These links must be switch leaf ports URIs. |
+
+>**Sample response header** 
+
+```
+HTTP/1.1 201 Created
+Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
+Cache-Control:no-cache
+Connection:keep-alive
+Content-Type:application/json; charset=utf-8
+Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Endpoints/1cf55323-c1be-43d6-bc51-7ea0d06190d8
+Odata-Version:4.0
+X-Frame-Options:sameorigin
+Date:Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
+Transfer-Encoding:chunked
+```
+
+>**Sample response body**
+
+```
+{
+"@odata.context":"/redfish/v1/$metadata#Endpoint.Endpoint",
+"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/
+Endpoints/1cf55323-c1be-43d6-bc51-7ea0d06190d8",
+"@odata.type":"#Endpoint.v1_5_0.Endpoint",
+"Description":"Redundant Endpoint to provide redundancy between two Leaf
+switch ports",
+"Id":"1cf55323-c1be-43d6-bc51-7ea0d06190d8",
+"Name":"Redundant-Endpoint-1",
+"Redundancy":[
+{
+"Mode":"Sharing",
+"RedundancySet":[
+{
+"@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
+416c-8c82-413153a3c351:1/Switches/
+8bfa29b9-7fec-412d-8b29-042df4ba46f5:101/Ports/
+903f2727-2bf8-49b1-8ebd-97729a8f1460:eth1-2"
+},
+{
+"@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
+416c-8c82-413153a3c351:1/Switches/e941a68e-4ffc-4d65-
+b3a5-3afe84f73fd7:102/Ports/43730998-10fe-491e-94a9-f48eeaa1e202:eth1-2"
+}
+]
+}
+]
+}
+```
+
+## Creating a zone of endpoints
+
+| **Method**         | `POST`                                                       |
+| ------------------ | ------------------------------------------------------------ |
+| **URI**            | `/redfish/v1/Fabrics/{fabricID}/zones`                       |
+| **Description**    | This operation creates a zone of endpoints in a specific fabric.<br />**NOTE**: Ensure that the endpoints are created first before assigning them to the zone of endpoints. |
+| **Returns**        | JSON schema representing the created zone.                   |
+| **Response code**  | On success, `201 Created`                                    |
+| **Authentication** | Yes                                                          |
+
+>**curl command**
+
+
+```
+curl -i POST \
+-H "X-Auth-Token:{X-Auth-Token}" \
+-d \
+'{
+"Name":"HPE-ZOE-1",
+"Description":"Zone of endpoints",
+"ZoneType":"ZoneOfEndpoints",
+"Links":{
+"ContainedByZones":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Zones/451a7e26-00a4-4139-87b0-49e419bfa1ee"
+}
+],
+"AddressPools":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/AddressPools/1b695701-6ce3-457e-a530-2bc55cac5fc7"
+}
+],
+"Endpoints":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Endpoints/1309dbc6-85d7-4bf8-8df7-92b9f56b0092"
+}
+]
+}
+}'
+'https://{odim_host}:{port}/redfish/v1/Fabrics/{fabricID}/Zones'
+```
+
+>**Sample request body**
+
+```
+{
+"Name":"HPE-ZOE-1",
+"Description":"Zone of endpoints",
+"ZoneType":"ZoneOfEndpoints",
+"Links":{
+"ContainedByZones":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Zones/451a7e26-00a4-4139-87b0-49e419bfa1ee"
+}
+],
+"AddressPools":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/AddressPools/1b695701-6ce3-457e-a530-2bc55cac5fc7"
+}
+],
+"Endpoints":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Endpoints/1309dbc6-85d7-4bf8-8df7-92b9f56b0092"
+}
+]
+}
+}
+```
+
+**Request parameters**
+
+| Parameter           | Type                       | Description                                                  |
+| ------------------- | -------------------------- | ------------------------------------------------------------ |
+| Name                | String<br/>(optional)      | Name for the zone.<br />**NOTE**: Ensure that there are no spaces. |
+| Description         | String<br/>(optional)      | Description for the zone.                                    |
+| ZoneType            | String<br/>(required)<br/> | The type of the zone to be created. Options include:<br/>• ZoneOfZones<br/>• ZoneOfEndpoints<br/>• Default<br/>The type of the zone for a zone of endpoints is<br/>ZoneOfEndpoints. |
+| Links{              | Object<br/>(required)      | Contains references to other resources that are related to the zone. |
+| ContainedByZones [{ | Array<br/>(required)       | Represents an array of ZoneOfZones for the zone being created. |
+| @odata.id }]        | String                     | Link to a Zone of zones.                                     |
+| AddressPools [{     | Array<br/>(required)       | Represents an array of address pools linked with a ZoneOfZones. |
+| @odata.id }]        | String                     | Link to an address pool.                                     |
+| Endpoints [{        | Array<br/>(required)       | Represents an array of endpoints to be included in the zone. |
+| @odata.id }]        | String                     | Link to an endpoint.                                         |
+
+>**Sample response header** 
+
+```
+HTTP/1.1 201 Created
+Allow: "GET", "PUT", "POST", "PATCH", "DELETE"
+Cache-Control: no-cache
+Connection: keep-alive
+Content-Type: application/json; charset=utf-8
+Location: /redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Zones/8e18e640-a91b-4d9b-9810-b63af3d9ce9b
+Odata-Version: 4.0
+X-Frame-Options: sameorigin
+Date: Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
+Transfer-Encoding: chunked
+```
+
+>**Sample response body**
+
+```
+{
+"@odata.context":"/redfish/v1/$metadata#Zone.Zone",
+"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/
+Zones/8e18e640-a91b-4d9b-9810-b63af3d9ce9b",
+"@odata.type":"#Zone.v1_4_0.Zone",
+"Description":"Zone of endpoints",
+"Id":"8e18e640-a91b-4d9b-9810-b63af3d9ce9b",
+"Links":{
+"AddressPools":[
+{
+"@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
+416c-8c82-413153a3c351:1/AddressPools/bb2cd119-01e5-499d-8465-
+c219ad891842"
+}
+],
+"ContainedByZones":[
+{
+"@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
+416c-8c82-413153a3c351:1/Zones/6415d9aa-47a3-439d-93bb-5b23dccf5d60"
+}
+],
+"ContainedByZones@odata.count":1,
+"Endpoints":[
+{
+"@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
+416c-8c82-413153a3c351:1/Endpoints/1cf55323-c1be-43d6-bc51-7ea0d06190d8"
+}
+]
+},
+"Name":"HPE-ZOE-1",
+"Status":{
+"Health":"OK",
+"State":"Enabled"
+},
+"ZoneType":"ZoneOfEndpoints"
+}
+```
+
+## Updating a zone of endpoints
+
+| **Method**         | `PATCH`                                                 |
+| ------------------ | ------------------------------------------------------- |
+| **URI**            | `/redfish/v1/Fabrics/{fabricid}/Zones/{zoneid}`         |
+| **Description**    | This operation updates a zone of endpoints.             |
+| **Returns**        | JSON schema representing the updated zone of endpoints. |
+| **Response code**  | On success, `200 OK`                                    |
+| **Authentication** | Yes                                                     |
+
+>**curl command**
+
+
+```
+curl -i PATCH \
+-H "X-Auth-Token:{X-Auth-Token}" \
+-d \
+'{
+"Links":{
+"Endpoints":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Endpoints/1309dbc6-85d7-4bf8-8df7-92b9f56b0092"
+}
+]
+}
+}'
+'https://{odim_host}:{port}/redfish/v1/Fabrics/{fabricID}/Zones/{zoneid}
+```
+
+>**Sample request body**
+
+```
+{
+"Links":{
+"Endpoints":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Endpoints/1309dbc6-85d7-4bf8-8df7-92b9f56b0092"
+}
+]
+}
+}
+```
+
+**Request parameters**
+
+| Parameter | Type                 | Description                                                  |
+| --------- | -------------------- | ------------------------------------------------------------ |
+| Links{    | (required)           |                                                              |
+| Endpoints | Array<br/>(required) | Represents an array of links to endpoints.<br/>**NOTE**: Adding new endpoint links replaces the existing ones in the zone of endpoints being updated.To retain the existing links, add them in this array along with the new ones. |
+
+
+>**Sample response header** 
+
+```
+HTTP/1.1 200 OK
+Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
+Cache-Control:no-cache
+Connection:keep-alive
+Content-Type:application/json; charset=utf-8
+Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Zones/8e18e640-a91b-4d9b-9810-b63af3d9ce9b
+Odata-Version:4.0
+X-Frame-Options:sameorigin
+Date:Fri, 02 Apr 2021 07:39:26 GMT-2d 22h
+Transfer-Encoding:chunked
+```
+
+>**Sample response body**
+
+```
+{
+"@odata.context":"/redfish/v1/$metadata#Zone.Zone",
+"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/
+Zones/8e18e640-a91b-4d9b-9810-b63af3d9ce9b",
+"@odata.type":"#Zone.v1_4_0.Zone",
+"Description":"Zone of endpoints",
+"Id":"8e18e640-a91b-4d9b-9810-b63af3d9ce9b",
+"Links":{
+"AddressPools":[
+{
+"@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
+416c-8c82-413153a3c351:1/AddressPools/bb2cd119-01e5-499d-8465-
+c219ad891842"
+}
+],
+"ContainedByZones":[
+{
+"@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
+416c-8c82-413153a3c351:1/Zones/6415d9aa-47a3-439d-93bb-5b23dccf5d60"
+}
+],
+"ContainedByZones@odata.count":1,
+"Endpoints":[
+{
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+1/Endpoints/1309dbc6-85d7-4bf8-8df7-92b9f56b0092"
+}
+]
+},
+"Name":"HPE-ZOE-1",
+"Status":{
+"Health":"OK",
+"State":"Enabled"
+},
+"ZoneType":"ZoneOfEndpoints"
+}
+```
+
+## Deleting an ACI fabric entity
+
+## 
+
+| **Method**         | `DELETE`                                                     |
+| ------------------ | ------------------------------------------------------------ |
+| **URI**            | `/redfish/v1/Fabrics/{fabricID}/AddressPools/{addresspoolid}`<br/>`/redfish/v1/Fabrics/{fabricID}/Zones/{zoneid}`<br/>`/redfish/v1/Fabrics/{fabricID}/Endpoints/{endpointid}` |
+| **Description**    | This operation deletes a fabric entity such as an addresspool, zone, or an endpoint in a<br/>specific fabric.<br/>When deleting fabric entities, ensure to delete them in the following order:<br/>1. Zone of endpoints<br/>2. Endpoints<br/>3. Zone of zones<br/>4. Default zones<br/>5. Address pools |
+| **Response code**  | On success, `204 No Content`                                 |
+| **Authentication** | Yes                                                          |
+
+>**curl command**
+
+
+```
+curl -i -X DELETE \
+-H "X-Auth-Token:{X-Auth-Token}" \
+'https://{odim_host}:{port}/redfish/v1/Fabrics/{fabricID}/AddressPools/{addresspoolid}'
+curl -i -X DELETE \
+-H "X-Auth-Token:{X-Auth-Token}" \
+'https://{odim_host}:{port}/redfish/v1/Fabrics/{fabricID}/Zones/{zoneid}'
+curl -i -X DELETE \
+-H "X-Auth-Token:{X-Auth-Token}" \
+'https://{odim_host}:{port}/redfish/v1/Fabrics/{fabricID}/Endpoints/{endpointid}'
+```
 
 ## Configuring proxy server for a plugin version
 
@@ -596,19 +1289,10 @@ Transfer-Encoding:chunked
 
    In this content, replace the following placeholders \(highlighted in bold\) with the actual values:
 
-   | Placeholder                      | Description                                                  |
-   | -------------------------------- | ------------------------------------------------------------ |
-| <plugin_name>                    | Name of the plugin. Example: "grfplugin"<br>                 |
+   | Placeholder   | Description                                  |
+   | ------------- | -------------------------------------------- |
+| <plugin_name> | Name of the plugin. Example: "aciplugin"<br> |
    
-
-| <plugin_name>                    | Name of the plugin. Example: "aciplugin"<br>                 |
->>>>>>832606c5c87db5c760da3fdb0c6975c6c5cb80e5
-   | <k8s_self_node_IP>               | The physical IP address of the cluster node.                 |
-   | <k8s_node2_IP><k8s_node3_IP><br> | The physical IP addresses of the other cluster nodes.        |
-   | <plugin_node_port>               | The port specified for the eventListenerNodePort configuration parameter in the `<plugin_name>-config.yaml` file. |
-   | <VIP>                            | Virtual IP address specified in the keepalived.conf file.    |
-   | <nginx_plugin_port>              | Any free port on the cluster node. It must be available on all the other cluster nodes. Preferred port is above 45000.<br>Ensure that this port is not used as any other service port.<br>**NOTE**: You can reach the resource aggregator API server at:<br>`https://<VIP>:<nginx_api_port>`.<br> |
-
 4. Restart Nginx systemd service only on the leader node \(cluster node where Keepalived priority is set to a higher number\): 
 
    ```
@@ -636,15 +1320,6 @@ The following table lists all the configuration parameters required to deploy a 
 | RootServiceUUID       | RootServiceUUID to be used by the plugin service. To generate an UUID, run the following command:<br> ```$ uuidgen```<br> Copy the output and paste it as the value for rootServiceUUID. |
 | username              | Username of the plugin.                                      |
 | password              | The encrypted password of the plugin.                        |
-odimUsername          | The username of the default administrator account of Resource Aggregator for ODIM . <br />**NOTE**: This parameter is applicable only to URP. |
-| odimPassword          | The encrypted password of the default administrator account of Resource Aggregator for ODIM.<br />**NOTE**: This parameter is applicable only to URP.<br> To generate the encrypted password, run the command specified in "Command to generate an encrypted password". |
-| lbHost                | If there is only one cluster node, the lbHost is the IP address of the cluster node. If there is more than one cluster node \( haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived. |
-| lbPort                | If it is a one-cluster configuration, the lbPort must be same as eventListenerNodePort. <br>If there is more than one cluster node \( haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file. |
-
-| logPath               | The path where the plugin logs are stored. The default path is `/var/log/<plugin_name>_logs`<br />**Example**: /var/log/grfplugin\_logs |
-
-| lbHost                | If there is only one cluster node, the lbHost is the IP address of the cluster node. If there is more than one cluster node \( haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived. |
-| lbPort                | If it is a one-cluster configuration, the lbPort must be same as eventListenerNodePort.<br>If there is more than one cluster node \(haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file. |
-| logPath               | The path where the plugin logs are stored. The default path is `/var/log/<plugin_name>_logs`<br />**Example**: `/var/log/grfplugin\_logs` 
-
- 
+| lbHost                | If there is only one cluster node, the lbHost is the IP address of the cluster node. If there is more than one cluster node \(haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived. |
+| lbPort                | If it is a one-cluster configuration, the lbPort must be same as eventListenerNodePort. <br>If there is more than one cluster node \(haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file. |
+| logPath               | The path where the plugin logs are stored. The default path is `/var/log/<plugin_name>_logs`<br/>**Example**: `/var/log/aciplugin\_logs`<br/> |
