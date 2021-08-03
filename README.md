@@ -6,9 +6,22 @@
 - [Overview of Cisco ACI](#overview-of-cisco-aci)
   - [Deploying the Cisco ACI plugin](#deploying-the-cisco-aci-plugin)
   - [Adding a plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework)
-  - [Cisco ACI fabric APIs](#Cisco-ACI-fabric-APIs)
   - [Configuring proxy server for a plugin version](#configuring-proxy-server-for-a-plugin-version)
   - [Plugin configuration parameters](#plugin-configuration-parameters)
+  - [Resource Aggregator for ODIM default ports](#resource-aggregator-for-odim-default-ports)
+- [Cisco ACI fabric APIs](#Cisco-ACI-fabric-APIs)
+  - [Creating an addresspool for a zone of zones](#creating-an-addresspool-for-a-zone-of-zones)
+  - [Creating an addresspool for a zone of endpoints](#creating-an-addresspool-for-a-zone-of-endpoints)
+  - [Creating a default zone](#creating-a-default-zone)
+  - [Creating a zone of zones](#creating-a-zone-of-zones)
+  - [Updating the connected ports](#updating-the-connected-ports)
+  - [Creating a redundant endpoint](#creating-a-redundant-endpoint)
+  - [Creating a zone of endpoints](#creating-a-zone-of-endpoints)
+  - [Updating a zone of endpoints](#updating-a-zone-of-endpoints)
+  - [Deleting an ACI fabric entity](#deleting-an-ACI-fabric-entity)
+- [Mapping of Redfish logical entities to Cisco ACI entities](#Mapping-of-Redfish-logical-entities-to-Cisco-ACI-entities)
+
+
 
 # Overview of Cisco ACI
 
@@ -17,7 +30,7 @@ Cisco ACI (Application Centric Infrastructure) is an open ecosystem model that u
 Resource Aggregator for ODIM supports Cisco ACI plugin that can abstract, translate, and expose southbound resource information to the resource aggregator through
 RESTful APIs.
 
-## 7Deploying the Cisco ACI plugin
+## Deploying the Cisco ACI plugin
 
 **Prerequisites**
 
@@ -35,24 +48,18 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    $ mkdir ~/plugins/aciplugin
    ```
 
-4. Log in to each cluster node and run the following commands: 
-
-   ```
-   $ sudo mkdir -p /var/log/aciplugin_logs/
-   ```
-
-   ```
-   $ sudo chown odimra:odimra /var/log/aciplugin_logs
-   ```
-
-5. On the deployment node, copy the Cisco ACI plugin configuration file to `~/plugins/aciplugin`.
+4. On the deployment node, copy the Cisco ACI plugin configuration file and the hook script to `~/plugins/aciplugin`.
 
    ```
    $ cp ~/ODIM/odim-controller/helmcharts/aciplugin/aciplugin-config.yaml ~/plugins/aciplugin
    ```
 
-5. Open the Dell plugin configuration YAML file.
-5. Open the Cisco ACI plugin configuration YAML file.
+   ```
+   $ cp ~/ODIM/odim-controller/helmcharts/aciplugin/aciplugin.sh ~/plugins/aciplugin
+   ```
+
+4. Open the Cisco ACI plugin configuration YAML file.
+
    ```
    $ vi ~/plugins/aciplugin/aciplugin-config.yaml
    ```
@@ -63,23 +70,14 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    odimra:
     namespace: odim
     groupID: 2021
-   aciplugin:
-    hostname: knode1
-    eventListenerNodePort: 30084
-    aciPluginRootServiceUUID: 7a38b735-8b9f-48a0-b3e7-e5a180567d37
-    username: admin
-    password: sTfTyTZFvNj5zU5Tt0TfyDYU-ye3_ZqTMnMIj-LAeXaa8vCnBqq8Ga7zV6ZdfqQCdSAzmaO5AJxccD99UHLVlQ==
-    lbHost: 10.24.1.232
-    lbPort: 30084
-    logPath: /var/log/aciplugin_logs
     haDeploymentEnabled: false
    aciplugin:
     eventListenerNodePort: 30086
     aciPluginRootServiceUUID: a127eedc-c29b-416c-8c82-413153a3c351
     username: admin
     password: sTfTyTZFvNj5zU5Tt0TfyDYU-ye3_ZqTMnMIj-
-    LAeXaa8vCnBqq8Ga7zV6ZdfqQCdSAzmaO5AJxccD99UHLVlQ==
-    lbHost: 10.24.1.232
+   LAeXaa8vCnBqq8Ga7zV6ZdfqQCdSAzmaO5AJxccD99UHLVlQ==
+    lbHost: aciplugin
     lbPort: 30086
     logPath: /var/log/aciplugin_logs
     apicHost: 10.42.0.50
@@ -90,16 +88,48 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     odimPassword: Od!m12$4
    ```
 
-8. Update the following mandatory parameters in the plugin configuration file:
+5. Update the following parameters in the plugin configuration file:
 
-   - **hostname**: Hostname of the cluster node where the Cisco ACI plugin will be installed.
-   - **lbHost**: IP address of the cluster node where the Cisco ACI plugin will be installed.
-   - **lbPort**: Default port is 30084.
-   - **aciPluginRootServiceUUID**: RootServiceUUID to be used by the Cisco ACI plugin service.
-   
-   Other parameters can either be empty or have default values. Optionally, you can update them with values based on your requirements. For more information on each parameter, see [Plugin configuration parameters](#plugin-configuration-parameters).
-   
-9. Generate the Helm package for the Cisco ACI plugin on the deployment node:
+   - **eventListenerNodePort**: The port used for listening to the ACI plugin events. Default port is 30086.
+
+   - **aciPluginRootServiceUUID**: The RootServiceUUID to be used by the ACI plugin service. To generate an UUID, run the following command:
+
+     `uuidgen`
+
+     Copy the output and paste it as the value for rootServiceUUID.
+
+   - **lbHost**: Default value is aciplugin for one node cluster configuration.  For three node cluster configuration,  \(haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived.
+
+   - **lbPort**: Default port is 30086. It is the same as eventListenerNodePort for one node cluster configuration. For three node cluster configuration, \(haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file.
+
+   - **apicHost**: The IP address of the machine where Cisco APIC UI is launched.
+
+   - **apicUserName**: The Cisco APIC username.
+
+   - **apicPassword**: The Cisco APIC password.
+
+   - **odimURL**: The URL of the ODIMRA API service. URL is https://api:45000.
+
+   - **odimUserName**: The username of the default administrator account of Resource Aggregator for ODIM.
+
+   - **odimPassword**: The encrypted password of the default administrator account of Resource Aggregator for ODIM.
+     To generate the encrypted password, run the following command:
+
+     ```
+     $ echo -n '<odimra_password>' \
+     | openssl pkeyutl -encrypt -inkey \
+     ~/R4H60-11004/odim-controller/\
+     scripts/certs/\
+     <deploymentid>/odimra_rsa.private \
+     -pkeyopt rsa_padding_mode:oaep \
+     -pkeyopt rsa_oaep_md:sha512|openssl
+     \
+     base64 -A
+     ```
+
+   Other parameters can have default values. Optionally, you can update them with values based on your requirements. For more information on each parameter, see [Plugin configuration parameters](#plugin-configuration-parameters).
+
+6. Generate the Helm package for the Cisco ACI plugin on the deployment node:
 
    1. Navigate to `odim-controller/helmcharts/aciplugin`.
 
@@ -115,41 +145,65 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
       The Helm package for the Cisco ACI plugin is created in the tgz format.
 
-8. Save the Dell plugin Docker image on the deployment node at `~/plugins/aciplugin`.
-8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
+7. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
+
    ```
    $ sudo docker save aciplugin:1.0 -o ~/plugins/aciplugin/aciplugin.tar
    ```
 
-9. If it is a three-node cluster configuration, log in to each cluster node and [configure proxy server for the plugin](#configuring-proxy-server-for-a-plugin-version). 
+8. If it is a three-node cluster configuration, log in to each cluster node and [configure proxy server for the plugin](#configuring-proxy-server-for-a-plugin-version). 
 
    Skip this step if it is a one-node cluster configuration.
 
-10. Navigate to the `/ODIM/odim-controller/scripts` directory on the deployment node.
+9. Navigate to the `/ODIM/odim-controller/scripts` directory on the deployment node.
+
+   ```
+   $ cd ~/ODIM/odim-controller/scripts
+   ```
+
+10. Open the `kube_deploy_nodes.yaml` file.
+
+         $ vi kube_deploy_nodes.yaml
+
+11. Update the following parameters in the `kube_deploy_nodes.yaml` file to their corresponding values: 
+
+    | Parameter                    | Value                                                        |
+    | ---------------------------- | ------------------------------------------------------------ |
+    | connectionMethodConf         | The connection method associated with Cisco ACI plugin: ConnectionMethodVariant: <br />`Fabric:BasicAuth:ACI_v1.0.0`<br> |
+    | odimraKafkaClientCertFQDNSan | The FQDN to be included in the Kafka client certificate of Resource Aggregator for ODIM for deploying the ACI plugin:<br />`aciplugin`, `aciplugin-events`<br>Add these values to the existing comma-separated list.<br> |
+    | odimraServerCertFQDNSan      | The FQDN to be included in the server certificate of Resource Aggregator for ODIM for deploying the ACI plugin:<br /> `aciplugin`, `aciplugin-events`<br> Add these values to the existing comma-separated list.<br> |
+
+         Example:
+         
+         odimPluginPath: /home/bruce/plugins
+          connectionMethodConf:
+          - ConnectionMethodType: Redfish
+            ConnectionMethodVariant: Fabric:BasicAuth:ACI_v1.0.0
+          odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
+          odimraServerCertFQDNSan: aciplugin,aciplugin-events
+
+12. Run the following command: 
+
+        $ python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --upgrade odimra-config
+
+13. Run the following command to install the Cisco ACI plugin: 
 
     ```
-    $ cd ~/ODIM/odim-controller/scripts
-    ```
-
-11. Run the following command to install the Cisco ACI plugin: 
-
-    ```
-    $ python3 odim-controller.py --config \
-     /home/${USER}/ODIM/odim-controller/scripts\
+    $ python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts\
     /kube_deploy_nodes.yaml --add plugin --plugin aciplugin
     ```
 
-12. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
+14. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
 
     `$ kubectl get pods -n odim`
-    
+
     Example output showing the Cisco ACI plugin pod details:
-    
+
     | NAME                      | READY | STATUS  | RESTARTS | AGE   |
     | ------------------------- | ----- | ------- | -------- | ----- |
     | aciplugin-5fc4b6788-2xx97 | 1/1   | Running | 0        | 4d22h |
 
-13. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
+15. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
 
 ## Adding a plugin into the Resource Aggregator for ODIM framework
 
@@ -217,7 +271,7 @@ The plugin you want to add is successfully deployed.
           }
        }
     }' \
-     'https://{odim_host}:30080/redfish/v1/AggregationService/AggregationSources' -kNOTE: To generate a base64 encoded string of `{odim_username:odim_password}`, run the following command:
+     'https://{odim_host}:30080/redfish/v1/AggregationService/AggregationSources' -k
    ```
    
    <blockquote>
@@ -255,26 +309,39 @@ The plugin you want to add is successfully deployed.
    2. To identify the plugin Id of the added plugin, perform HTTP `GET` on each manager link in the response. 
       The JSON response body for a plugin manager has `Name` as the plugin name.
       Example:
-      The JSON response body for the URP plugin manager has `Name` as `CiscoACI`.
+      The JSON response body for the Cisco ACI plugin manager has `Name` as `CiscoACI`.
 
       **Sample response**
 
       ```
       {
-              "@odata.context":"/redfish/v1/$metadata#Manager.Manager",
-              "@odata.etag":"W/\"AA6D42B0\"",
-              "@odata.id":"/redfish/v1/Managers/536cee48-84b2-43dd-b6e2-2459ac0eeac6",
-              "@odata.type":"#Manager.v1_3_3.Manager",
-              "FirmwareVersion":"1.0",
-              "Id":"a9cf0e1e-c36d-4d5b-9a31-cc07b611c01b",
-              "ManagerType":"Service",
-              "Name":"CiscoACI",
-              "Status":{
-                 "Health":"OK",
-                 "State":"Enabled"
-              },
-              "UUID":"a9cf0e1e-c36d-4d5b-9a31-cc07b611c01b"
-           }
+          "@odata.context": "/redfish/v1/$metadata#Manager.Manager",
+          "@odata.id": "/redfish/v1/Managers/fb40f2dc-0c6d-4464-bc98-fea775adbbb9",
+          "@odata.type": "#Manager.v1_10_0.Manager",
+          "FirmwareVersion": "v1.0.0",
+          "Id": "fb40f2dc-0c6d-4464-bc98-fea775adbbb9",
+          "Links": {
+              "ManagerForSwitches": [
+                  {
+                      "@odata.id": "/redfish/v1/Fabrics/fb40f2dc-0c6d-4464-bc98-fea775adbbb9:1/Switches/af10c386-68d5-45aa-b3c3-431e3e4c3647:101"
+                  },
+                  {
+                      "@odata.id": "/redfish/v1/Fabrics/fb40f2dc-0c6d-4464-bc98-fea775adbbb9:1/Switches/668f20cf-b6e7-4ded-a180-bf8e33dc18fc:102"
+                  },
+                  {
+                      "@odata.id": "/redfish/v1/Fabrics/fb40f2dc-0c6d-4464-bc98-fea775adbbb9:1/Switches/7d5a25b3-3ac4-49f4-a929-243b5b97bba0:201"
+                  }
+              ],
+              "ManagerForSwitches@odata.count": 3
+          },
+          "ManagerType": "Service",
+          "Name": "ACI",
+          "Status": {
+              "Health": "OK",
+              "State": "Enabled"
+          },
+          "UUID": "fb40f2dc-0c6d-4464-bc98-fea775adbbb9"
+      }
       ```
 
 3. Check in the JSON response of the plugin manager, if: 
@@ -285,34 +352,119 @@ The plugin you want to add is successfully deployed.
 
       For more information, refer to "Managers" in [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).
 
-## Cisco ACI fabric APIs
+## Configuring proxy server for a plugin version
+
+1. Log in to each cluster node and navigate to the following path: 
+
+   ```
+   $ cd /opt/nginx/servers
+   ```
+
+2. Create a plugin configuration file called `<plugin-name>_nginx_server.conf`: 
+
+   ```
+   $ vi <plugin-name>_nginx_server.conf
+   ```
+
+   Example:
+
+   ```
+   $ vi aciplugin_nginx_server.conf
+   ```
+
+3. Copy the following content into the `<plugin-name>_nginx_server.conf` file on each cluster node: 
+
+   ```
+   upstream <plugin_name>  {
+     server <k8s_self_node_IP>:<plugin_node_port> max_fails=2 fail_timeout=10s;
+     server <k8s_node2_IP>:<plugin_node_port> max_fails=2 fail_timeout=10s backup;
+     server <k8s_node3_IP>:<plugin_node_port> max_fails=2 fail_timeout=10s backup;
+   }
+    
+   server {
+           listen <k8s_self_node_IP>:<nginx_plugin_port> ssl;
+           listen <VIP>:<nginx_plugin_port> ssl;
+           server_name odim_proxy;
+           ssl_session_timeout  5m;
+           ssl_prefer_server_ciphers on;
+           ssl_protocols TLSv1.2;
+           ssl_certificate  /opt/nginx/certs/server.crt;
+           ssl_certificate_key /opt/nginx/certs/server.key;
+           ssl_trusted_certificate /opt/nginx/certs/rootCA.crt;
+    
+           location / {
+                   proxy_pass https://<plugin_name>;
+                   proxy_http_version 1.1;
+                   proxy_set_header X-Forwarded-For $remote_addr;
+                   proxy_pass_header Server;
+                   proxy_ssl_protocols TLSv1.2;
+                   proxy_ssl_certificate /opt/nginx/certs/server.crt;
+                   proxy_ssl_certificate_key /opt/nginx/certs/server.key;
+                   proxy_ssl_trusted_certificate /opt/nginx/certs/rootCA.crt;
+           }
+   }
+   ```
+
+   In this content, replace the following placeholders with the actual values:
+
+   | Placeholder   | Description                              |
+   | ------------- | ---------------------------------------- |
+   | <plugin_name> | Name of the plugin. Example: "aciplugin" |
+
+4. Restart Nginx systemd service only on the leader node \(cluster node where Keepalived priority is set to a higher number\): 
+
+   ```
+   $ sudo systemctl restart nginx
+   ```
+
+   <blockquote>
+   NOTE:If you restart Nginx on a follower node \(cluster node having lower Keepalived priority number\), the service fails to start with the following error:</blockquote>
+   
+   ```
+   nginx: [emerg] bind() to <VIP>:<nginx_port> failed (99: Cannot assign requested address)
+   ```
+
+
+
+## Plugin configuration parameters
+
+The following table lists all the configuration parameters required to deploy a plugin service:
+
+| Parameter           | Description                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| odimra              | List of configurations required for deploying the services of Resource Aggregator for ODIM and third-party services.<br> **NOTE**: Ensure the values of the parameters listed under odimra are the same as the ones specified in the `kube_deploy_nodes.yaml` file. |
+| namespace           | Namespace to be used for creating the service pods of Resource Aggregator for ODIM. Default value is "odim". You can optionally change it to a different value. |
+| groupID             | Group ID to be used for creating the odimra group. Default value is 2021. You can optionally change it to a different value.<br>**NOTE**: Ensure that the group id is not already in use on any of the nodes. |
+| haDeploymentEnabled | When set to true, it deploys third-party services as a three-instance cluster. By default, it is set to true. Before setting it to false, ensure there are at least three nodes in the Kubernetes cluster. |
+| username            | Username of the plugin                                       |
+| password            | The encrypted password of the plugin                         |
+| logPath             | The path where the plugin logs are stored. Default path is `/var/log/<plugin_name>_logs`<br/>**Example**: `/var/log/aciplugin_logs`<br/> |
+
+## Resource Aggregator for ODIM default ports
+
+The following table lists all the default ports used by the resource aggregator, plugins, and third-party services.
+
+| Port name                  | Ports                                                        |
+| -------------------------- | ------------------------------------------------------------ |
+| Container ports            | 45000, 45101-45201, 9092, 9082, 6380, 6379, 8500, 8300, 8302, 8301, 8600, 2181<br> |
+| API node port              | 30080                                                        |
+| Plugin event listener port | 30083                                                        |
+| Kafka node port            | 30092 for a one-node cluster configuration.<br />30092, 30093, and 30094 for a three-node cluster configuration.<br> |
+| GRF plugin port            | 45001                                                        |
+| URP port                   | 45007                                                        |
+| ACI port                   | 45020                                                        |
+
+# Cisco ACI fabric APIs
 
 Resource Aggregator for ODIM exposes Redfish APIs to view and manage simple fabrics. A fabric is a network topology consisting of entities such as interconnecting switches, zones, endpoints, and address pools. The Redfish `Fabrics` APIs allow you to create and remove these entities in a fabric.
 
 When creating fabric entities, ensure to create them in the following order:
 
-1.  Zone-specific address pools
-
-2.  Address pools for zone of zones
-
+1.  Address pools
+2.  Default zones
 3.  Zone of zones
-
 4.  Endpoints
-
 5.  Zone of endpoints
-
-
-When deleting fabric entities, ensure to delete them in the following order:
-
-1.  Zone of endpoints
-
-2.  Endpoints
-
-3.  Zone of zones
-
-4.  Address pools for zone of zones
-
-5.  Zone-specific address pools
 
 <blockquote>
     IMPORTANT:Before using the `Fabrics` APIs, ensure that the fabric manager is installed, its plugin is deployed, and added into the Resource Aggregator for ODIM framework. </blockquote>
@@ -325,7 +477,7 @@ When deleting fabric entities, ensure to delete them in the following order:
 | /redfish/v1/Fabrics/\{fabricId\}/Zones/\{zoneId\}            | GET, PATCH, DELETE   | `Login`, `ConfigureComponents` |
 | /redfish/v1/Fabrics/\{fabricId\}/Endpoints                   | GET, POST            | `Login`, `ConfigureComponents` |
 | /redfish/v1/Fabrics/\{fabricId\}/Endpoints/\{endpointId\}    | GET, DELETE          | `Login`, `ConfigureComponents` |
-| /redfish/v1/Fabrics/\{fabricId\} /Switches/\{switchId\}/Ports/\{portid\}<br> | GET                  | `Login`                        |
+| /redfish/v1/Fabrics/\{fabricId\}/Switches/\{switchId\}/Ports/\{portid\}<br> | GET                  | `Login`                        |
 
 ## Creating an addresspool for a zone of zones
 
@@ -333,7 +485,7 @@ When deleting fabric entities, ensure to delete them in the following order:
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/AddressPools`                |
 | **Description**    | This operation creates an address pool for a zone of zones in a specific fabric. |
-| **Returns**        | - Link to the created address pool in the `Location` header.<br />- JSON schema representing the created address pool. |
+| **Returns**        | - Link to the created address pool in the `Location` header<br />- JSON schema representing the created address pool |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
 
@@ -353,9 +505,9 @@ curl -i POST \
 "VLANIdentifierAddressRange": {
 "Lower": 100,
 "Upper": 200
-							  }
-   		}
-			}
+						}
+   	 }
+		 }
 }'
  'https://{odimra_host}:{port}/redfish/v1/Fabrics/{fabricID}/AddressPools'
 
@@ -382,11 +534,11 @@ curl -i POST \
 
 | Parameter                   | Type                      | Description                                                  |
 | --------------------------- | ------------------------- | ------------------------------------------------------------ |
-| Name                        | String (optional)         | Name for the address pool.                                   |
-| Description                 | String (optional)         | Description for the address pool.                            |
+| Name                        | String (optional)         | Name for the address pool                                    |
+| Description                 | String (optional)         | Description for the address pool                             |
 | Ethernet{                   |                           |                                                              |
 | IPv4\{                      | \(required\)<br>          |                                                              |
-| VlanIdentifierAddressRange{ | (required)                | A single VLAN (virtual LAN) used for creating the IP interface for the user Virtual Routing and Forwarding (VRF). |
+| VlanIdentifierAddressRange{ | (required)                | A single VLAN (virtual LAN) used for creating the IP interface for the user Virtual Routing and Forwarding (VRF) |
 | Lower                       | Integer \(required\)<br>  | VLAN lower address                                           |
 | Upper\}<br />}}             | Integer \(required\)<br/> | VLAN upper address<br />                                     |
 
@@ -433,7 +585,7 @@ Transfer-Encoding:chunked
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/AddressPools`                |
 | **Description**    | This operation creates an address pool that can be used by a zone of endpoints. |
-| **Returns**        | - Link to the created address pool in the `Location` header.<br />- JSON schema representing the created address pool. |
+| **Returns**        | - Link to the created address pool in the `Location` header<br />- JSON schema representing the created address pool |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
 
@@ -482,13 +634,13 @@ curl -i POST \
 
 | Parameter                   | Type                     | Description                                                  |
 | --------------------------- | ------------------------ | ------------------------------------------------------------ |
-| Name                        | String (optional)        | Name for the address pool.                                   |
+| Name                        | String (optional)        | Name for the address pool                                    |
 | Ethernet{                   |                          |                                                              |
 | IPv4\{                      | \(required\)<br>         |                                                              |
-| GatewayIPAddressList\{      | Array \(required\)<br>   | IP pool to assign IPv4 address to the IP interface for VLAN per switch. |
-| VlanIdentifierAddressRange{ | (required)               | A single VLAN (virtual LAN) used for creating the IP interface for the user Virtual Routing and Forwarding (VRF). |
+| GatewayIPAddressList\{      | Array \(required\)<br>   | IP pool to assign IPv4 address to the IP interface for VLAN per switch |
+| VlanIdentifierAddressRange{ | (required)               | A single VLAN (virtual LAN) used for creating the IP interface for the user Virtual Routing and Forwarding (VRF) |
 | Lower                       | Integer \(required\)<br> | VLAN lower address                                           |
-| Upper\}<br />}}             |                          | VLAN upper address<br />Lower and Upper must have the same values for the addresspool created for ZoneOfEndpoints. |
+| Upper\}<br />}}             |                          | VLAN upper address.<br />Lower and Upper must have the same values for the addresspool created for ZoneOfEndpoints. |
 
 >**Sample response header** 
 
@@ -533,7 +685,7 @@ Transfer-Encoding:chunked
 | ------------------ | ----------------------------------------------------------- |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/Zones`                      |
 | **Description**    | This operation creates a default zone in a specific fabric. |
-| **Returns**        | JSON schema representing the created zone.                  |
+| **Returns**        | JSON schema representing the created zone                   |
 | **Response code**  | On success, `201 Created`                                   |
 | **Authentication** | Yes                                                         |
 
@@ -569,7 +721,7 @@ curl -i POST \
 | Parameter   | Type                  | Description                                                  |
 | ----------- | --------------------- | ------------------------------------------------------------ |
 | Name        | String (optional)     | Name for the zone.<br />**NOTE**: Ensure that there are no spaces. |
-| Description | String (optional)     | The description for the zone.                                |
+| Description | String (optional)     | The description for the zone.<br />**NOTE**: Ensure that there are no spaces. |
 | ZoneType    | String<br/>(required) | The type of the zone to be created. Options include:<br/>• ZoneOfZones<br/>• ZoneOfEndpoints<br/>• Default<br/>The type of the zone for a default zone is Default.<br/> |
 
 >**Sample response header** 
@@ -612,7 +764,7 @@ Transfer-Encoding: chunked
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/Zones`                       |
 | **Description**    | This operation creates an empty container zone for all the other zones in a specific fabric. You can assign address pools, endpoints, other zones, or switches to this zone. |
-| **Returns**        | JSON schema representing the created zone.                   |
+| **Returns**        | JSON schema representing the created zone                    |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
 
@@ -675,11 +827,11 @@ curl -i POST \
 | Parameter        | Type                  | Description                                                  |
 | ---------------- | --------------------- | ------------------------------------------------------------ |
 | Name             | String (optional)     | Name for the zone.<br />**NOTE**: Ensure that there are no spaces. |
-| Description      | String (optional)     | Description for the zone.                                    |
+| Description      | String (optional)     | Description for the zone.<br />**NOTE**: Ensure that there are no spaces. |
 | ZoneType         | String<br/>(required) | The type of the zone to be created. Options include:<br/>• ZoneOfZones<br/>• ZoneOfEndpoints<br/>• Default<br/>The type of the zone for a default zone is ZoneOfZones.<br/> |
 | Links{           | (required)            |                                                              |
-| ContainedByZones | Array<br/>(required)  | Represents an array of default zones for the zone being created. |
-| AddressPools     | Array<br/>(required)  | AddressPool links supported for the Zone of Zones (AddressPool links created for ZoneOfZones). |
+| ContainedByZones | Array<br/>(required)  | Represents an array of default zones for the zone being created |
+| AddressPools     | Array<br/>(required)  | AddressPool links supported for the Zone of Zones (AddressPool links created for ZoneOfZones) |
 
 >**Sample response header** 
 
@@ -738,7 +890,7 @@ Zones/6415d9aa-47a3-439d-93bb-5b23dccf5d60",
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricid}/Switches/{switchid}/Ports/{portid}` |
 | **Description**    | This operation updates a connected port.                     |
-| **Returns**        | JSON schema representing the updated connected port.         |
+| **Returns**        | JSON schema representing the updated connected port          |
 | **Response code**  | On success, `200 OK`                                         |
 | **Authentication** | Yes                                                          |
 
@@ -777,10 +929,10 @@ curl -i PATCH \
 
 **Request parameters**
 
-| Parameter      | Type                 | Description                                      |
-| -------------- | -------------------- | ------------------------------------------------ |
-| Links{         | (required)           |                                                  |
-| ContainedPorts | Array<br/>(required) | Represents an array of links to connected ports. |
+| Parameter      | Type                 | Description                                     |
+| -------------- | -------------------- | ----------------------------------------------- |
+| Links{         | (required)           |                                                 |
+| ContainedPorts | Array<br/>(required) | Represents an array of links to connected ports |
 >**Sample response header** 
 
 ```
@@ -832,7 +984,7 @@ ccae270d-4524-44de-95ba-62a92d9476d6:eth1-2",
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/Endpoints`                   |
 | **Description**    | This operation creates a redundant endpoint in a specific fabric. |
-| **Returns**        | • Link to the created endpoint in the `Location` header.<br/>• JSON schema representing the created endpoint. |
+| **Returns**        | • Link to the created endpoint in the `Location` header<br/>• JSON schema representing the created endpoint |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
 
@@ -899,10 +1051,10 @@ Leaf switch ports",
 
 | Parameter      | Type                  | Description                                                  |
 | -------------- | --------------------- | ------------------------------------------------------------ |
-| Name           | String<br/>(optional) | Name for the endpoint.                                       |
-| Description    | String<br/>(optional) | Description for the endpoint.                                |
+| Name           | String<br/>(optional) | Name for the endpoint                                        |
+| Description    | String<br/>(optional) | Description for the endpoint                                 |
 | Redundancy[    | Array                 |                                                              |
-| Mode           | String                | Redundancy mode.                                             |
+| Mode           | String                | Redundancy mode                                              |
 | RedundancySet] | Array                 | Set of redundancy ports connected to the switches.<br/>These links must be switch leaf ports URIs. |
 
 >**Sample response header** 
@@ -959,7 +1111,7 @@ b3a5-3afe84f73fd7:102/Ports/43730998-10fe-491e-94a9-f48eeaa1e202:eth1-2"
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/zones`                       |
 | **Description**    | This operation creates a zone of endpoints in a specific fabric.<br />**NOTE**: Ensure that the endpoints are created first before assigning them to the zone of endpoints. |
-| **Returns**        | JSON schema representing the created zone.                   |
+| **Returns**        | JSON schema representing the created zone                    |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
 
@@ -1033,15 +1185,15 @@ curl -i POST \
 | Parameter           | Type                       | Description                                                  |
 | ------------------- | -------------------------- | ------------------------------------------------------------ |
 | Name                | String<br/>(optional)      | Name for the zone.<br />**NOTE**: Ensure that there are no spaces. |
-| Description         | String<br/>(optional)      | Description for the zone.                                    |
+| Description         | String<br/>(optional)      | Description for the zone.<br />**NOTE**: Ensure that there are no spaces. |
 | ZoneType            | String<br/>(required)<br/> | The type of the zone to be created. Options include:<br/>• ZoneOfZones<br/>• ZoneOfEndpoints<br/>• Default<br/>The type of the zone for a zone of endpoints is<br/>ZoneOfEndpoints. |
-| Links{              | Object<br/>(required)      | Contains references to other resources that are related to the zone. |
-| ContainedByZones [{ | Array<br/>(required)       | Represents an array of ZoneOfZones for the zone being created. |
-| @odata.id }]        | String                     | Link to a Zone of zones.                                     |
-| AddressPools [{     | Array<br/>(required)       | Represents an array of address pools linked with a ZoneOfZones. |
-| @odata.id }]        | String                     | Link to an address pool.                                     |
-| Endpoints [{        | Array<br/>(required)       | Represents an array of endpoints to be included in the zone. |
-| @odata.id }]        | String                     | Link to an endpoint.                                         |
+| Links{              | Object<br/>(required)      | Contains references to other resources that are related to the zone |
+| ContainedByZones [{ | Array<br/>(required)       | Represents an array of ZoneOfZones for the zone being created |
+| @odata.id }]        | String                     | Link to a Zone of zones                                      |
+| AddressPools [{     | Array<br/>(required)       | Represents an array of address pools linked with a ZoneOfZones |
+| @odata.id }]        | String                     | Link to an address pool                                      |
+| Endpoints [{        | Array<br/>(required)       | Represents an array of endpoints to be included in the zone  |
+| @odata.id }]        | String                     | Link to an endpoint                                          |
 
 >**Sample response header** 
 
@@ -1101,13 +1253,13 @@ c219ad891842"
 
 ## Updating a zone of endpoints
 
-| **Method**         | `PATCH`                                                 |
-| ------------------ | ------------------------------------------------------- |
-| **URI**            | `/redfish/v1/Fabrics/{fabricid}/Zones/{zoneid}`         |
-| **Description**    | This operation updates a zone of endpoints.             |
-| **Returns**        | JSON schema representing the updated zone of endpoints. |
-| **Response code**  | On success, `200 OK`                                    |
-| **Authentication** | Yes                                                     |
+| **Method**         | `PATCH`                                                |
+| ------------------ | ------------------------------------------------------ |
+| **URI**            | `/redfish/v1/Fabrics/{fabricid}/Zones/{zoneid}`        |
+| **Description**    | This operation updates a zone of endpoints.            |
+| **Returns**        | JSON schema representing the updated zone of endpoints |
+| **Response code**  | On success, `200 OK`                                   |
+| **Authentication** | Yes                                                    |
 
 >**curl command**
 
@@ -1210,8 +1362,6 @@ c219ad891842"
 
 ## Deleting an ACI fabric entity
 
-## 
-
 | **Method**         | `DELETE`                                                     |
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/AddressPools/{addresspoolid}`<br/>`/redfish/v1/Fabrics/{fabricID}/Zones/{zoneid}`<br/>`/redfish/v1/Fabrics/{fabricID}/Endpoints/{endpointid}` |
@@ -1234,92 +1384,24 @@ curl -i -X DELETE \
 'https://{odim_host}:{port}/redfish/v1/Fabrics/{fabricID}/Endpoints/{endpointid}'
 ```
 
-## Configuring proxy server for a plugin version
+# Mapping of Redfish logical entities to Cisco ACI entities
 
-1. Log in to each cluster node and navigate to the following path: 
+| Redfish Logical Entity                                       | Equivalent Cisco ACI entity                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Default zone                                                 | Tenant                                                       |
+| *ZoneOfZone*                                                 | Application profile and VRF                                  |
+| *VLANIdentifierAddressRange of ZoneOfZoneAddressPool*        | VLAN range of a domain                                       |
+| Redundant ports of an endpoint                               | VPC Policy Group                                             |
+| *ZoneOfEndpoints*                                            | BridgeDomain and Application EPGs (Endpoint Group)           |
+| *GatewayIPAddress of ZoneOfEndpoints'* addresspool           | Subnet in BridgeDomain                                       |
+| *VLANIdentifierAddressRange of ZoneOfEndpoints'* addresspool | VLAN in StaticPort of Application EPGs                       |
+| Health and status of Redfish fabrics, switches, and ports    | Health and status of ACI fabrics, switches, and ports. See the following table |
 
-   ```
-   $ cd /opt/nginx/servers
-   ```
+**Mapping of Redfish fabric health to ACI fabric health range**
 
-2. Create a plugin configuration file called `<plugin-name>_nginx_server.conf`: 
+| Redfish representation | Equivalent ACI range |
+| ---------------------- | -------------------- |
+| OK                     | 91 to 100            |
+| Warning                | 31 to 90             |
+| Critical               | Lesser than 31       |
 
-   ```
-   $ vi <plugin-name>_nginx_server.conf
-   ```
-
-   Example:
-
-   ```
-   $ vi grfplugin_nginx_server.conf
-   ```
-
-3. Copy the following content into the `<plugin-name>_nginx_server.conf` file on each cluster node: 
-
-   ```
-   upstream <plugin_name>  {
-     server <k8s_self_node_IP>:<plugin_node_port> max_fails=2 fail_timeout=10s;
-     server <k8s_node2_IP>:<plugin_node_port> max_fails=2 fail_timeout=10s backup;
-     server <k8s_node3_IP>:<plugin_node_port> max_fails=2 fail_timeout=10s backup;
-   }
-    
-   server {
-           listen <k8s_self_node_IP>:<nginx_plugin_port> ssl;
-           listen <VIP>:<nginx_plugin_port> ssl;
-           server_name odim_proxy;
-           ssl_session_timeout  5m;
-           ssl_prefer_server_ciphers on;
-           ssl_protocols TLSv1.2;
-           ssl_certificate  /opt/nginx/certs/server.crt;
-           ssl_certificate_key /opt/nginx/certs/server.key;
-           ssl_trusted_certificate /opt/nginx/certs/rootCA.crt;
-    
-           location / {
-                   proxy_pass https://<plugin_name>;
-                   proxy_http_version 1.1;
-                   proxy_set_header X-Forwarded-For $remote_addr;
-                   proxy_pass_header Server;
-                   proxy_ssl_protocols TLSv1.2;
-                   proxy_ssl_certificate /opt/nginx/certs/server.crt;
-                   proxy_ssl_certificate_key /opt/nginx/certs/server.key;
-                   proxy_ssl_trusted_certificate /opt/nginx/certs/rootCA.crt;
-           }
-   }
-   ```
-
-   In this content, replace the following placeholders \(highlighted in bold\) with the actual values:
-
-   | Placeholder   | Description                                  |
-   | ------------- | -------------------------------------------- |
-| <plugin_name> | Name of the plugin. Example: "aciplugin"<br> |
-   
-4. Restart Nginx systemd service only on the leader node \(cluster node where Keepalived priority is set to a higher number\): 
-
-   ```
-   $ sudo systemctl restart nginx
-   ```
-
-   <blockquote>
-   NOTE:If you restart Nginx on a follower node \(cluster node having lower Keepalived priority number\), the service fails to start with the following error:</blockquote>
-   
-   ```
-   nginx: [emerg] bind() to <VIP>:<nginx_port> failed (99: Cannot assign requested address)
-   ```
-
-## Plugin configuration parameters
-
-The following table lists all the configuration parameters required to deploy a plugin service:
-
-| Parameter             | Description                                                  |
-| --------------------- | ------------------------------------------------------------ |
-| odimra                | List of configurations required for deploying the services of Resource Aggregator for ODIM and third-party services.<br> **NOTE**: Ensure that the values of the parameters listed under odimra are same as the ones specified in the `kube_deploy_nodes.yaml` file. |
-| namespace             | Namespace to be used for creating the service pods of Resource Aggregator for ODIM. The default value is "odim". You can optionally change it to a different value. |
-| groupID               | Group ID to be used for creating the odimra group. The default value is 2021. You can optionally change it to a different value.<br>**NOTE**: Ensure that the group id is not already in use on any of the nodes. |
-| haDeploymentEnabled   | When set to true, it deploys third-party services as a three-instance cluster. By default, it is set to true. Before setting it to false, ensure that there are at least three nodes in the Kubernetes cluster. |
-| eventListenerNodePort | The port used for listening to plugin events. Refer to the sample plugin yaml configuration file to view the sample port information. |
-| RootServiceUUID       | RootServiceUUID to be used by the plugin service. To generate an UUID, run the following command:<br> ```$ uuidgen```<br> Copy the output and paste it as the value for rootServiceUUID. |
-| username              | Username of the plugin.                                      |
-| password              | The encrypted password of the plugin.                        |
-| lbHost                | If there is only one cluster node, the lbHost is the IP address of the cluster node. If there is more than one cluster node \(haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived. |
-| lbPort                | If it is a one-cluster configuration, the lbPort must be same as eventListenerNodePort. <br>If there is more than one cluster node \(haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file. |
-| logPath               | The path where the plugin logs are stored. The default path is `/var/log/<plugin_name>_logs`<br/>**Example**: `/var/log/aciplugin\_logs`<br/> |
