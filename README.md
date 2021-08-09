@@ -65,11 +65,11 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 4. On the deployment node, copy the Cisco ACI plugin configuration file and the hook script to `~/plugins/aciplugin`.
 
    ```
-   $ cp install/Kubernetes/helmcharts/aciplugin/aciplugin-config.yaml ~/plugins/aciplugin
+   $ cp PluginCiscoACI/install/Kubernetes/helmcharts/aciplugin/aciplugin-config.yaml ~/plugins/aciplugin
    ```
 
    ```
-   $ cp install/Kubernetes/helmcharts/aciplugin/aciplugin.sh ~/plugins/aciplugin
+   $ cp PluginCiscoACI/install/Kubernetes/helmcharts/aciplugin/aciplugin.sh ~/plugins/aciplugin
    ```
 
 5. Open the Cisco ACI plugin configuration YAML file.
