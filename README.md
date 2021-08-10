@@ -177,7 +177,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
 11. Open the `kube_deploy_nodes.yaml` file.
 
-         $ vi kube_deploy_nodes.yaml
+        $ vi kube_deploy_nodes.yaml
 
 12. Update the following parameters in the `kube_deploy_nodes.yaml` file to their corresponding values: 
 
@@ -208,7 +208,9 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     
 15. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
 
-    `$ kubectl get pods -n odim`
+    ```
+    $ kubectl get pods -n odim
+    ```
 
     Example output showing the Cisco ACI plugin pod details:
 
