@@ -171,9 +171,9 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
 10. Navigate to the `/ODIM/odim-controller/scripts` directory on the deployment node.
 
-   ```
-   $ cd ~/ODIM/odim-controller/scripts
-   ```
+    ```
+    $ cd ~/ODIM/odim-controller/scripts
+    ```
 
 11. Open the `kube_deploy_nodes.yaml` file.
 
