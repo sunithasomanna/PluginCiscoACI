@@ -145,10 +145,10 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
 7. Generate the Helm package for the Cisco ACI plugin on the deployment node:
 
-   1. Navigate to `PluginCiscoACI/install/Kubernetes/helmcharts/aciplugin`.
+   1. Navigate to `PluginCiscoACI/install/Kubernetes/helmcharts`.
 
       ```
-      $ cd PluginCiscoACI/install/Kubernetes/helmcharts/aciplugin
+      $ cd PluginCiscoACI/install/Kubernetes/helmcharts
       ```
 
    2. Run the following command to create `aciplugin` Helm package at `~/plugins/aciplugin`:
@@ -203,10 +203,9 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 14. Run the following command to install the Cisco ACI plugin: 
 
     ```
-    $ python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts\
-    /kube_deploy_nodes.yaml --add plugin --plugin aciplugin
+    $ python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --add plugin --plugin aciplugin
     ```
-
+    
 15. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
 
     `$ kubectl get pods -n odim`
