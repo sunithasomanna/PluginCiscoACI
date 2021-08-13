@@ -254,7 +254,7 @@ The plugin you want to add is successfully deployed.
    
    ```
    {
-         "HostName":"aciplugin:45007",
+         "HostName":"aciplugin:45020",
          "UserName":"admin",
          "Password":"Plug!n12$4",
          "Links":{
