@@ -39,43 +39,43 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 1. Create a directory called `plugins` on the deployment node.
 
    ```
-   $ mkdir plugins
+   mkdir plugins
    ```
 
 3. In the `plugins` directory, create a directory called `aciplugin`.
 
    ```
-   $ mkdir ~/plugins/aciplugin
+   mkdir ~/plugins/aciplugin
    ```
 
 3. Run the following commands on the deployment node:
 
    1. ```
-      $ git clone https://github.com/ODIM-Project/PluginCiscoACI.git
+      git clone https://github.com/ODIM-Project/PluginCiscoACI.git
       ```
 
    2. ```
-      $ cd PluginCiscoACI/
+      cd PluginCiscoACI/
       ```
 
    3. ```
-      $ ./build_images.sh
+      ./build_images.sh
       ```
 
 4. On the deployment node, copy the Cisco ACI plugin configuration file and the hook script to `~/plugins/aciplugin`.
 
    ```
-   $ cp PluginCiscoACI/install/Kubernetes/helmcharts/aciplugin-config.yaml ~/plugins/aciplugin
+   cp PluginCiscoACI/install/Kubernetes/helmcharts/aciplugin-config.yaml ~/plugins/aciplugin
    ```
 
    ```
-   $ cp PluginCiscoACI/install/Kubernetes/helmcharts/aciplugin.sh ~/plugins/aciplugin
+   cp PluginCiscoACI/install/Kubernetes/helmcharts/aciplugin.sh ~/plugins/aciplugin
    ```
 
 5. Open the Cisco ACI plugin configuration YAML file.
 
    ```
-   $ vi ~/plugins/aciplugin/aciplugin-config.yaml
+   vi ~/plugins/aciplugin/aciplugin-config.yaml
    ```
 
    **Sample aciplugin-config.yaml file:**
@@ -130,7 +130,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
      To generate the encrypted password, run the following command:
 
      ```
-     $ echo -n '<odimra_password>' \
+     echo -n '<odimra_password>' \
      | openssl pkeyutl -encrypt -inkey \
      ~/R4H60-11004/odim-controller/\
      scripts/certs/\
@@ -148,13 +148,13 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    1. Navigate to `PluginCiscoACI/install/Kubernetes/helmcharts`.
 
       ```
-      $ cd PluginCiscoACI/install/Kubernetes/helmcharts
+      cd PluginCiscoACI/install/Kubernetes/helmcharts
       ```
 
    2. Run the following command to create `aciplugin` Helm package at `~/plugins/aciplugin`:
 
       ```
-      $ helm package aciplugin -d ~/plugins/aciplugin
+      helm package aciplugin -d ~/plugins/aciplugin
       ```
 
       The Helm package for the Cisco ACI plugin is created in the tgz format.
@@ -162,7 +162,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
    ```
-   $ docker save aciplugin:1.0 -o ~/plugins/aciplugin/aciplugin.tar
+   docker save aciplugin:1.0 -o ~/plugins/aciplugin/aciplugin.tar
    ```
 
 9. If it is a three-node cluster configuration, log in to each cluster node and [configure proxy server for the plugin](#configuring-proxy-server-for-a-plugin-version). 
@@ -172,12 +172,12 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 10. Navigate to the `/ODIM/odim-controller/scripts` directory on the deployment node.
 
     ```
-    $ cd ~/ODIM/odim-controller/scripts
+    cd ~/ODIM/odim-controller/scripts
     ```
 
 11. Open the `kube_deploy_nodes.yaml` file.
 
-        $ vi kube_deploy_nodes.yaml
+        vi kube_deploy_nodes.yaml
 
 12. Update the following parameters in the `kube_deploy_nodes.yaml` file to their corresponding values: 
 
@@ -187,29 +187,37 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     | odimraKafkaClientCertFQDNSan | The FQDN to be included in the Kafka client certificate of Resource Aggregator for ODIM for deploying the ACI plugin:<br />`aciplugin`, `aciplugin-events`<br>Add these values to the existing comma-separated list.<br> |
     | odimraServerCertFQDNSan      | The FQDN to be included in the server certificate of Resource Aggregator for ODIM for deploying the ACI plugin:<br /> `aciplugin`, `aciplugin-events`<br> Add these values to the existing comma-separated list.<br> |
 
-         Example:
-         
-         odimPluginPath: /home/bruce/plugins
-          connectionMethodConf:
-          - ConnectionMethodType: Redfish
-            ConnectionMethodVariant: Fabric:BasicAuth:ACI_v1.0.0
-          odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
-          odimraServerCertFQDNSan: aciplugin,aciplugin-events
-
-13. Run the following command: 
-
-        $ python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --upgrade odimra-config
-
-14. Run the following command to install the Cisco ACI plugin: 
-
-    ```
-    $ python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --add plugin --plugin aciplugin
-    ```
+        odimPluginPath: /home/bruce/plugins
+         connectionMethodConf:
+         - ConnectionMethodType: Redfish
+           ConnectionMethodVariant: Fabric:BasicAuth:ACI_v1.0.0
+        odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
+        odimraServerCertFQDNSan: aciplugin,aciplugin-events
     
-15. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
+13. Move odimra_kafka_client.key and odimra_kafka_client.crt stored in odimCertsPath to a different folder.
+
+    <blockquote>NOTE: odimCertsPath is the absolute path of the directory where certificates required by the services of Resource Aggregator for ODIM are present.</blockquote>
+
+14. Update odimra-secrets:
+
+       ```
+    python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --upgrade odimra-secret
+       ```
+
+15. Run the following command: 
+
+        python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --upgrade odimra-config
+
+16. Run the following command to install the Cisco ACI plugin: 
 
     ```
-    $ kubectl get pods -n odim
+    python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --add plugin --plugin aciplugin
+    ```
+
+17. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
+
+    ```
+    kubectl get pods -n odim
     ```
 
     Example output showing the Cisco ACI plugin pod details:
@@ -218,7 +226,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     | ------------------------- | ----- | ------- | -------- | ----- |
     | aciplugin-5fc4b6788-2xx97 | 1/1   | Running | 0        | 4d22h |
 
-16. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
+18. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
 
 ## Adding a plugin into the Resource Aggregator for ODIM framework
 
@@ -293,7 +301,7 @@ The plugin you want to add is successfully deployed.
        NOTE: To generate a base64 encoded string of `{odim_username:odim_password}`, run the following command:</blockquote>
    
    ```
-   $ echo -n '{odim_username}:{odim_password}' | base64 -w0
+   echo -n '{odim_username}:{odim_password}' | base64 -w0
    ```
    
    Replace `{base64_encoded_string_of_[odim_username:odim_password]}` with the generated base64 encoded string in the curl command. You will receive:
@@ -372,19 +380,19 @@ The plugin you want to add is successfully deployed.
 1. Log in to each cluster node and navigate to the following path: 
 
    ```
-   $ cd /opt/nginx/servers
+   cd /opt/nginx/servers
    ```
 
 2. Create a plugin configuration file called `<plugin-name>_nginx_server.conf`: 
 
    ```
-   $ vi <plugin-name>_nginx_server.conf
+   vi <plugin-name>_nginx_server.conf
    ```
 
    Example:
 
    ```
-   $ vi aciplugin_nginx_server.conf
+   vi aciplugin_nginx_server.conf
    ```
 
 3. Copy the following content into the `<plugin-name>_nginx_server.conf` file on each cluster node: 
@@ -429,7 +437,7 @@ The plugin you want to add is successfully deployed.
 4. Restart Nginx systemd service only on the leader node \(cluster node where Keepalived priority is set to a higher number\): 
 
    ```
-   $ sudo systemctl restart nginx
+   sudo systemctl restart nginx
    ```
 
    <blockquote>
