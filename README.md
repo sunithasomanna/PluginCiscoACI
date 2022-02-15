@@ -207,7 +207,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
         odimPluginPath: /home/bruce/plugins
          connectionMethodConf:
          - ConnectionMethodType: Redfish
-           ConnectionMethodVariant: Fabric:BasicAuth:ACI_v1.0.0
+           ConnectionMethodVariant: Fabric:BasicAuth:ACI_v2.0.0
         odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
         odimraServerCertFQDNSan: aciplugin,aciplugin-events
 
@@ -293,7 +293,7 @@ The plugin you want to add is successfully deployed.
    
    | Plugin           | Default username | Default password | Connection method variant    |
    | ---------------- | ---------------- | ---------------- | ---------------------------- |
-   | Cisco ACI plugin | admin            | Plug!n12$4       | Fabric:XAuthToken:ACI_v1.0.0 |
+   | Cisco ACI plugin | admin            | Plug!n12$4       | Fabric:XAuthToken:ACI_v2.0.0 |
    
    Use the following curl command to add the plugin:
    
